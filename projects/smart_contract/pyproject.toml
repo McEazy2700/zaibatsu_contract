@@ -10,6 +10,9 @@ python = "^3.12"
 algokit-utils = "^2.2.0"
 python-dotenv = "^1.0.0"
 algorand-python = "^1.0.0"
+folks-feed-python-sdk = {git = "https://github.com/Folks-Feed-Oracle/folks-feed-python-sdk"}
+python-decouple = "^3.8"
+
 
 [tool.poetry.group.dev.dependencies]
 algokit-client-generator = "^1.1.3"
