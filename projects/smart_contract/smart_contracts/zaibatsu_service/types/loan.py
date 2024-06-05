@@ -41,6 +41,8 @@ class LoanDetails(Struct, kw_only=True):
     principal_paid: Bool
     completed_payment_rounds: UInt8
     borrower: Address
+    lender_nft_asser_id: A4UInt64
+    borrower_nft_asser_id: A4UInt64
 
 
 class CompleteLoanArgs(Struct, kw_only=True):
@@ -49,8 +51,3 @@ class CompleteLoanArgs(Struct, kw_only=True):
     lender_nft_image_url: String
     borrower_nft_image_url: String
     loan_hash: String
-
-
-class LoanNftName(Struct, kw_only=True):
-    short: String
-    long: String

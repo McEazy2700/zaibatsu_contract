@@ -7,7 +7,6 @@ from smart_contracts.zaibatsu_service.types.loan import (
     AddressArray,
     CompleteLoanArgs,
     LoanDetails,
-    LoanNftName,
 )
 
 
@@ -80,7 +79,7 @@ class ZaibatsuService(ap.ARC4Contract):
         ), "The payment completion timestamp must be greater than now"
         self._opt_contract_into_asset(txn.xfer_asset)
 
-        loan_details.collateral_paid = a4.Bool(True)
+        loan_details.collateral_paid = a4.Bool(True)  # noqa: FBT003
 
         op.Box.put(loan_key, loan_details.bytes)
 
@@ -101,26 +100,35 @@ class ZaibatsuService(ap.ARC4Contract):
         assert (
             txn.asset_amount == details.lend_asset_amount
         ), "The asset transfered must equal the lend_asset_amount recorded"
-        details.principal_paid = a4.Bool(True)
+        details.principal_paid = a4.Bool(True)  # noqa: FBT003
         details.completed_payment_rounds = a4.UInt8(0)
         borrower_nft = self.create_loan_nft(
-            completion_args.borrower_nft_image_url, a4.String(f"B{completion_args.loan_number}")
+            completion_args.borrower_nft_image_url,
+            op.concat(ap.Bytes(b"B"), completion_args.loan_number.native.bytes),
+            op.concat(ap.Bytes(b"ZAI-L #B"), completion_args.loan_number.native.bytes),
+            completion_args.loan_hash,
         )
-        # Todo: Create a borrower nft on success and store the key as part of the loan details
-        # Todo: Create a lender nft and store the key as part of the loan details
-        # On succefull transaction, send lender and borrower nft to their respective owners
+        lender_nft = self.create_loan_nft(
+            completion_args.lender_nft_image_url,
+            op.concat(ap.Bytes(b"L"), completion_args.loan_number.native.bytes),
+            op.concat(ap.Bytes(b"ZAI-L #L"), completion_args.loan_number.native.bytes),
+            completion_args.loan_hash,
+        )
+        details.borrower_nft_asser_id = A4UInt64(borrower_nft.id)
+        details.lender_nft_asser_id = A4UInt64(lender_nft.id)
+        op.Box.put(completion_args.loan_key.native.bytes, details.bytes)
         return details
 
     @ap.subroutine
     def create_loan_nft(
-        self, image_url: a4.String, short_name: a4.String, logn_name: a4.String, loan_hash: a4.String
+        self, image_url: a4.String, short_name: ap.Bytes, logn_name: ap.Bytes, loan_hash: a4.String
     ) -> ap.Asset:
         txn = ap.itxn.AssetConfig(
+            total=1,
+            url=image_url.native,
             unit_name=short_name,
             asset_name=logn_name,
-            url=image_url,
-            total=1,
-            metadata_hash=loan_hash,
+            metadata_hash=loan_hash.native.bytes,
             manager=op.Global.current_application_address,
             reserve=op.Global.current_application_address,
             freeze=op.Global.current_application_address,
@@ -141,18 +149,14 @@ class ZaibatsuService(ap.ARC4Contract):
         This callculates percentage of a number assuming the percent has been multiplied
         by 100 to account for the lack of decimal precision
         """
-        hundered: ap.UInt64 = op.btoi(A4UInt64(100).bytes)
-        percent_num = op.btoi(percent.bytes)
-        amount_num = op.btoi(amount.bytes)
-        results = ((hundered // percent_num) * amount_num) // op.btoi(a4.UInt64(100).bytes)
-        return A4UInt64.from_bytes(op.itob(results))
+        result = ((percent.native // ap.UInt64(100)) * amount.native) // ap.UInt64(100)
+        return A4UInt64(result)
 
     @ap.subroutine
     def percentage_increase(self, amount: A4UInt64, increase: A4UInt64) -> A4UInt64:
-        percentage_val = op.btoi(self.percentage(amount, increase).bytes)
-        amount_num = op.btoi(amount.bytes)
-        results = percentage_val + amount_num
-        return A4UInt64.from_bytes(op.itob(results))
+        percentage = self.percentage(amount, increase)
+        results = percentage.native + amount.native
+        return A4UInt64(results)
 
     @ap.subroutine
     def _opt_contract_into_asset(self, asset_id: ap.Asset) -> bool:

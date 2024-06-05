@@ -80,6 +80,9 @@ def test_iniate_p2p_loan_purchase(
         collateral_paid=False,
         payment_recipients=[(100 * 100, test_account.address)],
         image_url="",
+        completed_payment_rounds=0,
+        lender_nft_asser_id=0,
+        borrower_nft_asser_id=0,
     )
 
     sp = algod_client.suggested_params()
