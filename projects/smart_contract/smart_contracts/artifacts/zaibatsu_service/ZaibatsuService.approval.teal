@@ -12,10 +12,11 @@ main_entrypoint@2:
     method "create()bool"
     method "update()bool"
     method "delete()bool"
+    method "opt_contract_into_asset(asset)bool"
     method "iniate_p2p_loan_purchase(byte[],application,(string,uint8,uint64,uint64,uint64,uint64,uint64,uint64,uint8,uint64,(uint64,address)[],string,bool,bool,uint8,address,uint64,uint64),axfer)(string,uint8,uint64,uint64,uint64,uint64,uint64,uint64,uint8,uint64,(uint64,address)[],string,bool,bool,uint8,address,uint64,uint64)"
-    method "complete_p2p_loan_purchase((string,string,string,string,string),axfer)(string,uint8,uint64,uint64,uint64,uint64,uint64,uint64,uint8,uint64,(uint64,address)[],string,bool,bool,uint8,address,uint64,uint64)"
+    method "complete_p2p_loan_purchase(byte[],(string,string,string,string),asset,account,axfer)(string,uint8,uint64,uint64,uint64,uint64,uint64,uint64,uint8,uint64,(uint64,address)[],string,bool,bool,uint8,address,uint64,uint64)"
     txna ApplicationArgs 0
-    match main_hello_route@3 main_create_route@4 main_update_route@5 main_delete_route@6 main_iniate_p2p_loan_purchase_route@7 main_complete_p2p_loan_purchase_route@8
+    match main_hello_route@3 main_create_route@4 main_update_route@5 main_delete_route@6 main_opt_contract_into_asset_route@7 main_iniate_p2p_loan_purchase_route@8 main_complete_p2p_loan_purchase_route@9
     err // reject transaction
 
 main_hello_route@3:
@@ -99,8 +100,35 @@ main_delete_route@6:
     int 1
     return
 
-main_iniate_p2p_loan_purchase_route@7:
+main_opt_contract_into_asset_route@7:
     // smart_contracts/zaibatsu_service/contract.py:47
+    // @a4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/zaibatsu_service/contract.py:13
+    // class ZaibatsuService(ap.ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    txnas Assets
+    // smart_contracts/zaibatsu_service/contract.py:47
+    // @a4.abimethod()
+    callsub opt_contract_into_asset
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_iniate_p2p_loan_purchase_route@8:
+    // smart_contracts/zaibatsu_service/contract.py:58
     // @a4.abimethod()
     txn OnCompletion
     !
@@ -123,7 +151,7 @@ main_iniate_p2p_loan_purchase_route@7:
     int axfer
     ==
     assert // transaction type is axfer
-    // smart_contracts/zaibatsu_service/contract.py:47
+    // smart_contracts/zaibatsu_service/contract.py:58
     // @a4.abimethod()
     callsub iniate_p2p_loan_purchase
     byte 0x151f7c75
@@ -133,8 +161,8 @@ main_iniate_p2p_loan_purchase_route@7:
     int 1
     return
 
-main_complete_p2p_loan_purchase_route@8:
-    // smart_contracts/zaibatsu_service/contract.py:88
+main_complete_p2p_loan_purchase_route@9:
+    // smart_contracts/zaibatsu_service/contract.py:100
     // @ap.arc4.abimethod()
     txn OnCompletion
     !
@@ -144,6 +172,14 @@ main_complete_p2p_loan_purchase_route@8:
     // smart_contracts/zaibatsu_service/contract.py:13
     // class ZaibatsuService(ap.ARC4Contract):
     txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    txna ApplicationArgs 3
+    btoi
+    txnas Assets
+    txna ApplicationArgs 4
+    btoi
+    txnas Accounts
     txn GroupIndex
     int 1
     -
@@ -152,7 +188,7 @@ main_complete_p2p_loan_purchase_route@8:
     int axfer
     ==
     assert // transaction type is axfer
-    // smart_contracts/zaibatsu_service/contract.py:88
+    // smart_contracts/zaibatsu_service/contract.py:100
     // @ap.arc4.abimethod()
     callsub complete_p2p_loan_purchase
     byte 0x151f7c75
@@ -328,9 +364,45 @@ delete_after_if_else@2:
     retsub
 
 
+// smart_contracts.zaibatsu_service.contract.ZaibatsuService.opt_contract_into_asset(asset: uint64) -> uint64:
+opt_contract_into_asset:
+    // smart_contracts/zaibatsu_service/contract.py:47-48
+    // @a4.abimethod()
+    // def opt_contract_into_asset(self, asset: ap.Asset) -> bool:
+    proto 1 1
+    // smart_contracts/zaibatsu_service/contract.py:53
+    // asset_receiver=ap.Global.current_application_address,
+    global CurrentApplicationAddress
+    // smart_contracts/zaibatsu_service/contract.py:55
+    // txn.submit()
+    itxn_begin
+    itxn_field AssetReceiver
+    frame_dig -1
+    itxn_field XferAsset
+    // smart_contracts/zaibatsu_service/contract.py:50
+    // asset_amount=0,
+    int 0
+    itxn_field AssetAmount
+    // smart_contracts/zaibatsu_service/contract.py:49
+    // txn = ap.itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    // smart_contracts/zaibatsu_service/contract.py:51
+    // fee=1000,
+    int 1000
+    itxn_field Fee
+    // smart_contracts/zaibatsu_service/contract.py:55
+    // txn.submit()
+    itxn_submit
+    // smart_contracts/zaibatsu_service/contract.py:56
+    // return True
+    int 1
+    retsub
+
+
 // smart_contracts.zaibatsu_service.contract.ZaibatsuService.iniate_p2p_loan_purchase(loan_key: bytes, folks_feed_oracle: uint64, loan_details: bytes, txn: uint64) -> bytes:
 iniate_p2p_loan_purchase:
-    // smart_contracts/zaibatsu_service/contract.py:47-54
+    // smart_contracts/zaibatsu_service/contract.py:58-65
     // @a4.abimethod()
     // def iniate_p2p_loan_purchase(
     //     self,
@@ -340,37 +412,37 @@ iniate_p2p_loan_purchase:
     //     txn: gtxn.AssetTransferTransaction,
     // ) -> LoanDetails:
     proto 4 1
-    // smart_contracts/zaibatsu_service/contract.py:56
+    // smart_contracts/zaibatsu_service/contract.py:67
     // txn.asset_receiver == Global.current_application_address
     frame_dig -1
     gtxns AssetReceiver
     global CurrentApplicationAddress
     ==
-    // smart_contracts/zaibatsu_service/contract.py:55-57
+    // smart_contracts/zaibatsu_service/contract.py:66-68
     // assert (
     //     txn.asset_receiver == Global.current_application_address
     // ), "The recipient must be the ZaibatsuService address"
     assert // The recipient must be the ZaibatsuService address
-    // smart_contracts/zaibatsu_service/contract.py:59
+    // smart_contracts/zaibatsu_service/contract.py:70
     // val = op.Box.get(loan_key)
     frame_dig -4
     box_get
     bury 1
-    // smart_contracts/zaibatsu_service/contract.py:60
+    // smart_contracts/zaibatsu_service/contract.py:71
     // assert not val[1], "A Loan purchase with this key has already been initiated"
     !
     assert // A Loan purchase with this key has already been initiated
-    // smart_contracts/zaibatsu_service/contract.py:62
+    // smart_contracts/zaibatsu_service/contract.py:73
     // collateral_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
     frame_dig -1
     gtxns XferAsset
     frame_dig -3
     dig 1
     callsub get_asset_price
-    // smart_contracts/zaibatsu_service/contract.py:63
+    // smart_contracts/zaibatsu_service/contract.py:74
     // assert collateral_price > 0, "The asa is of no value or is not supported"
     assert // The asa is of no value or is not supported
-    // smart_contracts/zaibatsu_service/contract.py:65
+    // smart_contracts/zaibatsu_service/contract.py:76
     // assert loan_details.loan_type == a4.String("P2P"), "The loan must be a P2P loan"
     frame_dig -2
     int 0
@@ -386,7 +458,7 @@ iniate_p2p_loan_purchase:
     byte "\x00\x03P2P"
     ==
     assert // The loan must be a P2P loan
-    // smart_contracts/zaibatsu_service/contract.py:66
+    // smart_contracts/zaibatsu_service/contract.py:77
     // assert not loan_details.collateral_paid, "The loan collateral must not be paid"
     frame_dig -2
     int 512
@@ -398,7 +470,7 @@ iniate_p2p_loan_purchase:
     byte 0x00
     ==
     assert // The loan collateral must not be paid
-    // smart_contracts/zaibatsu_service/contract.py:67
+    // smart_contracts/zaibatsu_service/contract.py:78
     // assert not loan_details.principal_paid, "The loan principal must not be paid"
     frame_dig -2
     int 513
@@ -410,7 +482,7 @@ iniate_p2p_loan_purchase:
     byte 0x00
     ==
     assert // The loan principal must not be paid
-    // smart_contracts/zaibatsu_service/contract.py:68
+    // smart_contracts/zaibatsu_service/contract.py:79
     // assert loan_details.payment_recipients.length == ap.UInt64(1), "Only one recipient is allowed in a P2P loan"
     frame_dig -2
     int 60
@@ -428,7 +500,7 @@ iniate_p2p_loan_purchase:
     int 1
     ==
     assert // Only one recipient is allowed in a P2P loan
-    // smart_contracts/zaibatsu_service/contract.py:69
+    // smart_contracts/zaibatsu_service/contract.py:80
     // assert loan_details.borrower == txn.sender, "The sender must also be the borrower"
     frame_dig -2
     extract 66 32
@@ -436,60 +508,59 @@ iniate_p2p_loan_purchase:
     gtxns Sender
     ==
     assert // The sender must also be the borrower
-    // smart_contracts/zaibatsu_service/contract.py:72
+    // smart_contracts/zaibatsu_service/contract.py:83
     // loan_details.collateral_asset_id == txn.xfer_asset.id
     frame_dig -2
     extract 11 8
-    dig 1
+    swap
     itob
     b==
-    // smart_contracts/zaibatsu_service/contract.py:71-73
+    // smart_contracts/zaibatsu_service/contract.py:82-84
     // assert (
     //     loan_details.collateral_asset_id == txn.xfer_asset.id
     // ), "The asset being transfered must be the collateral asset"
     assert // The asset being transfered must be the collateral asset
-    // smart_contracts/zaibatsu_service/contract.py:75
-    // op.btoi(loan_details.collateral_asset_amount.bytes) == txn.asset_amount
+    // smart_contracts/zaibatsu_service/contract.py:86
+    // assert txn.asset_amount >= self.calculate_amt_plus_fee(
+    frame_dig -1
+    gtxns AssetAmount
+    // smart_contracts/zaibatsu_service/contract.py:87
+    // loan_details.collateral_asset_amount.native
     frame_dig -2
     extract 35 8
     btoi
-    frame_dig -1
-    gtxns AssetAmount
-    ==
-    // smart_contracts/zaibatsu_service/contract.py:74-76
-    // assert (
-    //     op.btoi(loan_details.collateral_asset_amount.bytes) == txn.asset_amount
-    // ), "The amount of asset transfered must equal the amount specified"
-    assert // The amount of asset transfered must equal the amount specified
-    // smart_contracts/zaibatsu_service/contract.py:78
-    // op.btoi(loan_details.payment_completion_timestamp.bytes) > op.Global.latest_timestamp
+    // smart_contracts/zaibatsu_service/contract.py:86-88
+    // assert txn.asset_amount >= self.calculate_amt_plus_fee(
+    //     loan_details.collateral_asset_amount.native
+    // ), "Insufficient txn asset_amount! Amount must be equal to collateral_asset_amount plus fees"
+    callsub calculate_amt_plus_fee
+    >=
+    assert // Insufficient txn asset_amount! Amount must be equal to collateral_asset_amount plus fees
+    // smart_contracts/zaibatsu_service/contract.py:91
+    // loan_details.payment_completion_timestamp.native > op.Global.latest_timestamp
     frame_dig -2
     extract 52 8
     btoi
     global LatestTimestamp
     >
-    // smart_contracts/zaibatsu_service/contract.py:77-79
+    // smart_contracts/zaibatsu_service/contract.py:90-92
     // assert (
-    //     op.btoi(loan_details.payment_completion_timestamp.bytes) > op.Global.latest_timestamp
+    //     loan_details.payment_completion_timestamp.native > op.Global.latest_timestamp
     // ), "The payment completion timestamp must be greater than now"
     assert // The payment completion timestamp must be greater than now
-    // smart_contracts/zaibatsu_service/contract.py:80
-    // self._opt_contract_into_asset(txn.xfer_asset)
-    callsub _opt_contract_into_asset
-    pop
-    // smart_contracts/zaibatsu_service/contract.py:82
+    // smart_contracts/zaibatsu_service/contract.py:94
     // loan_details.collateral_paid = a4.Bool(True)  # noqa: FBT003
     frame_dig -2
     int 512
     int 1
     setbit
     frame_bury -2
-    // smart_contracts/zaibatsu_service/contract.py:84
+    // smart_contracts/zaibatsu_service/contract.py:96
     // op.Box.put(loan_key, loan_details.bytes)
     frame_dig -4
     frame_dig -2
     box_put
-    // smart_contracts/zaibatsu_service/contract.py:86
+    // smart_contracts/zaibatsu_service/contract.py:98
     // return loan_details
     frame_dig -2
     retsub
@@ -497,86 +568,134 @@ iniate_p2p_loan_purchase:
 
 // smart_contracts.zaibatsu_service.contract.ZaibatsuService.get_asset_price(folks_feed_oracle: uint64, asa: uint64) -> uint64:
 get_asset_price:
-    // smart_contracts/zaibatsu_service/contract.py:140-141
+    // smart_contracts/zaibatsu_service/contract.py:184-185
     // @ap.subroutine
     // def get_asset_price(self, folks_feed_oracle: ap.Application, asa: ap.Asset) -> ap.UInt64:
     proto 2 1
-    // smart_contracts/zaibatsu_service/contract.py:142
+    // smart_contracts/zaibatsu_service/contract.py:186
     // [value, exists] = op.AppGlobal.get_ex_bytes(folks_feed_oracle, op.itob(asa.id))
     frame_dig -1
     itob
     frame_dig -2
     swap
     app_global_get_ex
-    // smart_contracts/zaibatsu_service/contract.py:143
+    // smart_contracts/zaibatsu_service/contract.py:187
     // assert exists, "This aset is not supported"
     assert // This aset is not supported
-    // smart_contracts/zaibatsu_service/contract.py:144
+    // smart_contracts/zaibatsu_service/contract.py:188
     // return op.extract_uint64(value, ap.UInt64(0))
     int 0
     extract_uint64
     retsub
 
 
-// smart_contracts.zaibatsu_service.contract.ZaibatsuService._opt_contract_into_asset(asset_id: uint64) -> uint64:
-_opt_contract_into_asset:
-    // smart_contracts/zaibatsu_service/contract.py:161-162
+// smart_contracts.zaibatsu_service.contract.ZaibatsuService.calculate_amt_plus_fee(amt: uint64) -> uint64:
+calculate_amt_plus_fee:
+    // smart_contracts/zaibatsu_service/contract.py:176-177
     // @ap.subroutine
-    // def _opt_contract_into_asset(self, asset_id: ap.Asset) -> bool:
+    // def calculate_amt_plus_fee(self, amt: ap.UInt64) -> ap.UInt64:
     proto 1 1
-    // smart_contracts/zaibatsu_service/contract.py:166
-    // asset_receiver=ap.Global.current_application_address,
-    global CurrentApplicationAddress
-    // smart_contracts/zaibatsu_service/contract.py:168
-    // txn.submit()
-    itxn_begin
-    itxn_field AssetReceiver
+    // smart_contracts/zaibatsu_service/contract.py:179
+    // amt_adjusted_for_decimal = amt * ap.UInt64(10)
     frame_dig -1
-    itxn_field XferAsset
-    // smart_contracts/zaibatsu_service/contract.py:163
-    // txn = ap.itxn.AssetTransfer(
-    int axfer
-    itxn_field TypeEnum
-    // smart_contracts/zaibatsu_service/contract.py:165
-    // fee=1000,
-    int 1000
-    itxn_field Fee
-    // smart_contracts/zaibatsu_service/contract.py:168
-    // txn.submit()
-    itxn_submit
-    // smart_contracts/zaibatsu_service/contract.py:169
-    // return True
-    int 1
+    int 10
+    *
+    // smart_contracts/zaibatsu_service/contract.py:180
+    // approx_fee_plus_amt = self.percentage_increase(A4UInt64(amt_adjusted_for_decimal), A4UInt64(fee_percentage))
+    itob
+    // smart_contracts/zaibatsu_service/contract.py:178
+    // fee_percentage = ap.UInt64(5)
+    int 5
+    // smart_contracts/zaibatsu_service/contract.py:180
+    // approx_fee_plus_amt = self.percentage_increase(A4UInt64(amt_adjusted_for_decimal), A4UInt64(fee_percentage))
+    itob
+    callsub percentage_increase
+    // smart_contracts/zaibatsu_service/contract.py:181
+    // corrected_approx_fee_plus_amt = approx_fee_plus_amt.native // ap.UInt64(10)
+    btoi
+    int 10
+    /
+    // smart_contracts/zaibatsu_service/contract.py:182
+    // return corrected_approx_fee_plus_amt
     retsub
 
 
-// smart_contracts.zaibatsu_service.contract.ZaibatsuService.complete_p2p_loan_purchase(completion_args: bytes, txn: uint64) -> bytes:
+// smart_contracts.zaibatsu_service.contract.ZaibatsuService.percentage_increase(amount: bytes, increase: bytes) -> bytes:
+percentage_increase:
+    // smart_contracts/zaibatsu_service/contract.py:195-196
+    // @ap.subroutine
+    // def percentage_increase(self, amount: A4UInt64, increase: A4UInt64) -> A4UInt64:
+    proto 2 1
+    // smart_contracts/zaibatsu_service/contract.py:197
+    // percentage = self.percentage(amount, increase)
+    frame_dig -2
+    frame_dig -1
+    callsub percentage
+    // smart_contracts/zaibatsu_service/contract.py:198
+    // results = percentage.native + amount.native
+    btoi
+    frame_dig -2
+    btoi
+    +
+    // smart_contracts/zaibatsu_service/contract.py:199
+    // return A4UInt64(results)
+    itob
+    retsub
+
+
+// smart_contracts.zaibatsu_service.contract.ZaibatsuService.percentage(amount: bytes, percent: bytes) -> bytes:
+percentage:
+    // smart_contracts/zaibatsu_service/contract.py:190-191
+    // @ap.subroutine
+    // def percentage(self, amount: A4UInt64, percent: A4UInt64) -> A4UInt64:
+    proto 2 1
+    // smart_contracts/zaibatsu_service/contract.py:192
+    // result = (percent.native * amount.native) // ap.UInt64(100)
+    frame_dig -1
+    btoi
+    frame_dig -2
+    btoi
+    *
+    int 100
+    /
+    // smart_contracts/zaibatsu_service/contract.py:193
+    // return A4UInt64(result)
+    itob
+    retsub
+
+
+// smart_contracts.zaibatsu_service.contract.ZaibatsuService.complete_p2p_loan_purchase(loan_key: bytes, completion_args: bytes, principal_asset: uint64, borrower: bytes, txn: uint64) -> bytes:
 complete_p2p_loan_purchase:
-    // smart_contracts/zaibatsu_service/contract.py:88-91
+    // smart_contracts/zaibatsu_service/contract.py:100-108
     // @ap.arc4.abimethod()
     // def complete_p2p_loan_purchase(
-    //     self, completion_args: CompleteLoanArgs, txn: gtxn.AssetTransferTransaction
+    //     self,
+    //     loan_key: ap.Bytes,
+    //     completion_args: CompleteLoanArgs,
+    //     principal_asset: ap.Asset,
+    //     borrower: ap.Account,
+    //     txn: gtxn.AssetTransferTransaction,
     // ) -> LoanDetails:
-    proto 2 1
-    // smart_contracts/zaibatsu_service/contract.py:92
-    // [loan_bytes, exists] = op.Box.get(completion_args.loan_key.bytes)
-    frame_dig -2
-    int 0
-    extract_uint16
-    frame_dig -2
-    dig 1
-    extract_uint16
-    int 2
-    +
-    frame_dig -2
-    cover 2
-    extract3
-    dup
+    proto 5 1
+    // smart_contracts/zaibatsu_service/contract.py:110
+    // txn.asset_receiver == Global.current_application_address
+    frame_dig -1
+    gtxns AssetReceiver
+    global CurrentApplicationAddress
+    ==
+    // smart_contracts/zaibatsu_service/contract.py:109-111
+    // assert (
+    //     txn.asset_receiver == Global.current_application_address
+    // ), "The recipient must be the ZaibatsuService address"
+    assert // The recipient must be the ZaibatsuService address
+    // smart_contracts/zaibatsu_service/contract.py:113
+    // [loan_bytes, exists] = op.Box.get(loan_key)
+    frame_dig -5
     box_get
-    // smart_contracts/zaibatsu_service/contract.py:93
+    // smart_contracts/zaibatsu_service/contract.py:114
     // assert exists, "A reccord with the loan_key passed was not found"
     assert // A reccord with the loan_key passed was not found
-    // smart_contracts/zaibatsu_service/contract.py:95
+    // smart_contracts/zaibatsu_service/contract.py:116
     // assert details.collateral_paid, "The loan collateral must have been paid by this point"
     dup
     int 512
@@ -588,7 +707,7 @@ complete_p2p_loan_purchase:
     byte 0x00
     !=
     assert // The loan collateral must have been paid by this point
-    // smart_contracts/zaibatsu_service/contract.py:96
+    // smart_contracts/zaibatsu_service/contract.py:117
     // assert not details.principal_paid, "The principal must not have been paid"
     dup
     int 513
@@ -600,99 +719,137 @@ complete_p2p_loan_purchase:
     byte 0x00
     ==
     assert // The principal must not have been paid
-    // smart_contracts/zaibatsu_service/contract.py:97
-    // assert txn.asset_receiver == details.borrower, "The borrower must be the reciever"
-    dup
-    extract 66 32
-    frame_dig -1
-    gtxns AssetReceiver
-    ==
-    assert // The borrower must be the reciever
-    // smart_contracts/zaibatsu_service/contract.py:98
-    // assert txn.xfer_asset.id == details.principal_asset_id, "The asset transfered must be the same as the principal"
-    dup
-    extract 3 8
+    // smart_contracts/zaibatsu_service/contract.py:119
+    // txn.xfer_asset.id == details.principal_asset_id.native
     frame_dig -1
     gtxns XferAsset
-    itob
-    b==
-    assert // The asset transfered must be the same as the principal
-    // smart_contracts/zaibatsu_service/contract.py:101
-    // txn.asset_amount == details.lend_asset_amount
+    dig 1
+    extract 3 8
+    btoi
     dup
-    extract 27 8
+    cover 3
+    ==
+    // smart_contracts/zaibatsu_service/contract.py:118-120
+    // assert (
+    //     txn.xfer_asset.id == details.principal_asset_id.native
+    // ), "The asset transfered must be the same as the principal"
+    assert // The asset transfered must be the same as the principal
+    // smart_contracts/zaibatsu_service/contract.py:121
+    // assert borrower == details.borrower.native, "The borrower must be the borrower in the loan details"
+    dup
+    extract 66 32
+    frame_dig -2
+    dig 1
+    ==
+    assert // The borrower must be the borrower in the loan details
+    // smart_contracts/zaibatsu_service/contract.py:123
+    // principal_asset.id == details.principal_asset_id.native
+    frame_dig -3
+    dig 3
+    ==
+    // smart_contracts/zaibatsu_service/contract.py:122-124
+    // assert (
+    //     principal_asset.id == details.principal_asset_id.native
+    // ), "The asset passed must be the same as the principal"
+    assert // The asset passed must be the same as the principal
+    // smart_contracts/zaibatsu_service/contract.py:126
+    // assert txn.asset_amount >= self.calculate_amt_plus_fee(
     frame_dig -1
     gtxns AssetAmount
-    itob
-    b==
-    // smart_contracts/zaibatsu_service/contract.py:100-102
-    // assert (
-    //     txn.asset_amount == details.lend_asset_amount
-    // ), "The asset transfered must equal the lend_asset_amount recorded"
-    assert // The asset transfered must equal the lend_asset_amount recorded
-    // smart_contracts/zaibatsu_service/contract.py:103
+    // smart_contracts/zaibatsu_service/contract.py:127
+    // details.principal_asset_amount.native
+    dig 2
+    extract 27 8
+    btoi
+    // smart_contracts/zaibatsu_service/contract.py:126-128
+    // assert txn.asset_amount >= self.calculate_amt_plus_fee(
+    //     details.principal_asset_amount.native
+    // ), "Insufficient txn asset_amount! Amount must be equal to principal_asset_amount plus fees"
+    dup
+    callsub calculate_amt_plus_fee
+    uncover 2
+    <=
+    assert // Insufficient txn asset_amount! Amount must be equal to principal_asset_amount plus fees
+    // smart_contracts/zaibatsu_service/contract.py:136
+    // completion_txn.submit()
+    itxn_begin
+    itxn_field AssetAmount
+    itxn_field AssetReceiver
+    swap
+    itxn_field XferAsset
+    // smart_contracts/zaibatsu_service/contract.py:130
+    // completion_txn = ap.itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    // smart_contracts/zaibatsu_service/contract.py:131
+    // fee=1000,
+    int 1000
+    itxn_field Fee
+    // smart_contracts/zaibatsu_service/contract.py:136
+    // completion_txn.submit()
+    itxn_submit
+    // smart_contracts/zaibatsu_service/contract.py:138
     // details.principal_paid = a4.Bool(True)  # noqa: FBT003
     int 513
     int 1
     setbit
-    // smart_contracts/zaibatsu_service/contract.py:104
+    // smart_contracts/zaibatsu_service/contract.py:139
     // details.completed_payment_rounds = a4.UInt8(0)
     byte 0x00
     replace2 65
-    // smart_contracts/zaibatsu_service/contract.py:106
+    // smart_contracts/zaibatsu_service/contract.py:141
     // completion_args.borrower_nft_image_url,
-    frame_dig -2
-    int 6
+    frame_dig -4
+    int 4
     extract_uint16
-    frame_dig -2
+    frame_dig -4
     dig 1
     extract_uint16
     int 2
     +
-    frame_dig -2
+    frame_dig -4
     cover 2
     extract3
-    // smart_contracts/zaibatsu_service/contract.py:107
-    // op.concat(ap.Bytes(b"B"), completion_args.loan_number.native.bytes),
-    frame_dig -2
-    int 2
+    // smart_contracts/zaibatsu_service/contract.py:142
+    // op.concat(ap.Bytes(b"B-"), completion_args.loan_unit_name.bytes),
+    frame_dig -4
+    int 0
     extract_uint16
-    frame_dig -2
+    frame_dig -4
     dig 1
     extract_uint16
     int 2
     +
-    frame_dig -2
+    frame_dig -4
     cover 2
     extract3
-    extract 2 0
-    byte "B"
+    byte "B-"
     dig 1
     concat
     swap
-    // smart_contracts/zaibatsu_service/contract.py:108
-    // op.concat(ap.Bytes(b"ZAI-L #B"), completion_args.loan_number.native.bytes),
-    byte "ZAI-L #B"
+    // smart_contracts/zaibatsu_service/contract.py:143
+    // op.concat(ap.Bytes(b"#B-"), completion_args.loan_unit_name.bytes),
+    byte "#B-"
     dig 1
     concat
-    // smart_contracts/zaibatsu_service/contract.py:109
+    // smart_contracts/zaibatsu_service/contract.py:144
     // completion_args.loan_hash,
-    frame_dig -2
-    int 8
+    frame_dig -4
+    int 6
     extract_uint16
-    frame_dig -2
+    frame_dig -4
     dig 1
     extract_uint16
     int 2
     +
-    frame_dig -2
+    frame_dig -4
     cover 2
     extract3
-    // smart_contracts/zaibatsu_service/contract.py:105-110
+    // smart_contracts/zaibatsu_service/contract.py:140-145
     // borrower_nft = self.create_loan_nft(
     //     completion_args.borrower_nft_image_url,
-    //     op.concat(ap.Bytes(b"B"), completion_args.loan_number.native.bytes),
-    //     op.concat(ap.Bytes(b"ZAI-L #B"), completion_args.loan_number.native.bytes),
+    //     op.concat(ap.Bytes(b"B-"), completion_args.loan_unit_name.bytes),
+    //     op.concat(ap.Bytes(b"#B-"), completion_args.loan_unit_name.bytes),
     //     completion_args.loan_hash,
     // )
     uncover 4
@@ -701,35 +858,35 @@ complete_p2p_loan_purchase:
     dig 3
     callsub create_loan_nft
     swap
-    // smart_contracts/zaibatsu_service/contract.py:112
+    // smart_contracts/zaibatsu_service/contract.py:147
     // completion_args.lender_nft_image_url,
-    frame_dig -2
-    int 4
+    frame_dig -4
+    int 2
     extract_uint16
-    frame_dig -2
+    frame_dig -4
     dig 1
     extract_uint16
     int 2
     +
-    frame_dig -2
+    frame_dig -4
     cover 2
     extract3
-    // smart_contracts/zaibatsu_service/contract.py:113
-    // op.concat(ap.Bytes(b"L"), completion_args.loan_number.native.bytes),
-    byte "L"
+    // smart_contracts/zaibatsu_service/contract.py:148
+    // op.concat(ap.Bytes(b"L-"), completion_args.loan_unit_name.bytes),
+    byte "L-"
     dig 4
     concat
     swap
-    // smart_contracts/zaibatsu_service/contract.py:114
-    // op.concat(ap.Bytes(b"ZAI-L #L"), completion_args.loan_number.native.bytes),
-    byte "ZAI-L #L"
+    // smart_contracts/zaibatsu_service/contract.py:149
+    // op.concat(ap.Bytes(b"#L-"), completion_args.loan_unit_name.bytes),
+    byte "#L-"
     uncover 5
     concat
-    // smart_contracts/zaibatsu_service/contract.py:111-116
+    // smart_contracts/zaibatsu_service/contract.py:146-151
     // lender_nft = self.create_loan_nft(
     //     completion_args.lender_nft_image_url,
-    //     op.concat(ap.Bytes(b"L"), completion_args.loan_number.native.bytes),
-    //     op.concat(ap.Bytes(b"ZAI-L #L"), completion_args.loan_number.native.bytes),
+    //     op.concat(ap.Bytes(b"L-"), completion_args.loan_unit_name.bytes),
+    //     op.concat(ap.Bytes(b"#L-"), completion_args.loan_unit_name.bytes),
     //     completion_args.loan_hash,
     // )
     swap
@@ -737,54 +894,53 @@ complete_p2p_loan_purchase:
     uncover 2
     uncover 3
     callsub create_loan_nft
-    // smart_contracts/zaibatsu_service/contract.py:117
+    // smart_contracts/zaibatsu_service/contract.py:152
     // details.borrower_nft_asser_id = A4UInt64(borrower_nft.id)
     swap
     itob
     uncover 2
     swap
     replace2 106
-    // smart_contracts/zaibatsu_service/contract.py:118
+    // smart_contracts/zaibatsu_service/contract.py:153
     // details.lender_nft_asser_id = A4UInt64(lender_nft.id)
     swap
     itob
     replace2 98
-    // smart_contracts/zaibatsu_service/contract.py:119
-    // op.Box.put(completion_args.loan_key.native.bytes, details.bytes)
-    swap
-    extract 2 0
+    // smart_contracts/zaibatsu_service/contract.py:154
+    // op.Box.put(loan_key, details.bytes)
+    frame_dig -5
     dig 1
     box_put
-    // smart_contracts/zaibatsu_service/contract.py:120
+    // smart_contracts/zaibatsu_service/contract.py:155
     // return details
     retsub
 
 
 // smart_contracts.zaibatsu_service.contract.ZaibatsuService.create_loan_nft(image_url: bytes, short_name: bytes, logn_name: bytes, loan_hash: bytes) -> uint64:
 create_loan_nft:
-    // smart_contracts/zaibatsu_service/contract.py:122-125
+    // smart_contracts/zaibatsu_service/contract.py:157-160
     // @ap.subroutine
     // def create_loan_nft(
     //     self, image_url: a4.String, short_name: ap.Bytes, logn_name: ap.Bytes, loan_hash: a4.String
     // ) -> ap.Asset:
     proto 4 1
-    // smart_contracts/zaibatsu_service/contract.py:128
+    // smart_contracts/zaibatsu_service/contract.py:163
     // url=image_url.native,
     frame_dig -4
     extract 2 0
-    // smart_contracts/zaibatsu_service/contract.py:131
+    // smart_contracts/zaibatsu_service/contract.py:167
     // metadata_hash=loan_hash.native.bytes,
     frame_dig -1
     extract 2 0
-    // smart_contracts/zaibatsu_service/contract.py:132
+    // smart_contracts/zaibatsu_service/contract.py:168
     // manager=op.Global.current_application_address,
     global CurrentApplicationAddress
-    // smart_contracts/zaibatsu_service/contract.py:133-135
+    // smart_contracts/zaibatsu_service/contract.py:169-171
     // reserve=op.Global.current_application_address,
     // freeze=op.Global.current_application_address,
     // clawback=op.Global.current_application_address,
     dupn 3
-    // smart_contracts/zaibatsu_service/contract.py:137
+    // smart_contracts/zaibatsu_service/contract.py:173
     // txn.submit()
     itxn_begin
     itxn_field ConfigAssetClawback
@@ -797,20 +953,22 @@ create_loan_nft:
     frame_dig -3
     itxn_field ConfigAssetUnitName
     itxn_field ConfigAssetURL
-    // smart_contracts/zaibatsu_service/contract.py:127
+    // smart_contracts/zaibatsu_service/contract.py:162
     // total=1,
     int 1
     itxn_field ConfigAssetTotal
-    // smart_contracts/zaibatsu_service/contract.py:126
+    // smart_contracts/zaibatsu_service/contract.py:161
     // txn = ap.itxn.AssetConfig(
     int acfg
     itxn_field TypeEnum
-    int 0
+    // smart_contracts/zaibatsu_service/contract.py:166
+    // fee=1000,
+    int 1000
     itxn_field Fee
-    // smart_contracts/zaibatsu_service/contract.py:137
+    // smart_contracts/zaibatsu_service/contract.py:173
     // txn.submit()
     itxn_submit
-    // smart_contracts/zaibatsu_service/contract.py:138
+    // smart_contracts/zaibatsu_service/contract.py:174
     // return op.ITxn.created_asset_id()
     itxn CreatedAssetID
     retsub

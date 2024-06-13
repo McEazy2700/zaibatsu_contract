@@ -30,7 +30,7 @@ class LoanDetails(Struct, kw_only=True):
     principal_asset_id: A4UInt64
     collateral_asset_id: A4UInt64
     interest_asset_amount: A4UInt64
-    lend_asset_amount: A4UInt64
+    principal_asset_amount: A4UInt64
     collateral_asset_amount: A4UInt64
     early_payment_penalty_amount: A4UInt64
     payment_rounds: UInt8
@@ -46,8 +46,7 @@ class LoanDetails(Struct, kw_only=True):
 
 
 class CompleteLoanArgs(Struct, kw_only=True):
-    loan_key: String
-    loan_number: String
+    loan_unit_name: String
     lender_nft_image_url: String
     borrower_nft_image_url: String
     loan_hash: String

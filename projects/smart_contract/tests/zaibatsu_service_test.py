@@ -1,3 +1,4 @@
+import random
 import secrets
 from datetime import datetime, timedelta
 
@@ -9,9 +10,12 @@ from algosdk.v2client.algod import AlgodClient
 from folksfeedsdk.constants import TestnetAssetId
 
 from smart_contracts.artifacts.zaibatsu_service.client import (
+    CompleteLoanArgs,
     LoanDetails,
     ZaibatsuServiceClient,
 )
+
+from .utils import calc_amount_plus_fee, encode_id_to_base64
 
 FOLKS_FEED_ORACLE_TESTNET_ID = 159512493
 
@@ -53,16 +57,30 @@ def test_says_hello(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
     assert result.return_value == "Hello, World"
 
 
+@pytest.fixture(scope="session")
+def loan_key() -> str:
+    loan_key = secrets.token_hex(4)
+    return loan_key
+
+
+def test_opt_contract_into_asset(zaibatsu_service_client: ZaibatsuServiceClient):
+    result1 = zaibatsu_service_client.opt_contract_into_asset(asset=TestnetAssetId.USDC)
+    result2 = zaibatsu_service_client.opt_contract_into_asset(asset=TestnetAssetId.USDt)
+    assert result1.return_value and result2.return_value
+
+
 # @pytest.mark.skip()
 def test_iniate_p2p_loan_purchase(
     zaibatsu_service_client: ZaibatsuServiceClient,
     algod_client: AlgodClient,
     creator_account: Account,
     test_account: Account,
+    loan_key: str,
 ) -> None:
-    loan_key = secrets.token_hex(4)
     completion_timestamp = round((datetime.now() + timedelta(weeks=52)).timestamp())
     collateral_amt = 16000
+    txn_amt = calc_amount_plus_fee(collateral_amt)
+    print(txn_amt)
 
     loan_details = LoanDetails(
         loan_type="P2P",
@@ -70,7 +88,7 @@ def test_iniate_p2p_loan_purchase(
         principal_asset_id=TestnetAssetId.USDC,
         collateral_asset_id=TestnetAssetId.USDt,
         interest_asset_amount=200,
-        lend_asset_amount=500,
+        principal_asset_amount=500,
         collateral_asset_amount=collateral_amt,
         early_payment_penalty_amount=20,
         payment_rounds=2,
@@ -91,7 +109,7 @@ def test_iniate_p2p_loan_purchase(
         sp=sp,
         index=TestnetAssetId.USDt,
         receiver=zaibatsu_service_client.app_address,
-        amt=collateral_amt,
+        amt=txn_amt,
     )
     txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
     zaibatsu_service_client.iniate_p2p_loan_purchase(
@@ -99,6 +117,47 @@ def test_iniate_p2p_loan_purchase(
         folks_feed_oracle=FOLKS_FEED_ORACLE_TESTNET_ID,
         loan_details=loan_details,
         txn=txn,
+        transaction_parameters=TransactionParameters(boxes=[(zaibatsu_service_client.app_id, loan_key.encode())]),
+    )
+
+
+# @pytest.mark.skip()
+def test_complete_p2p_loan_purchase(
+    algod_client: AlgodClient,
+    zaibatsu_service_client: ZaibatsuServiceClient,
+    test_account: Account,
+    creator_account: Account,
+    loan_key: str,
+) -> None:
+    sp = algod_client.suggested_params()
+    principal_amt = 500
+    txn_amt = calc_amount_plus_fee(principal_amt)
+    print(txn_amt)
+
+    txn = transaction.AssetTransferTxn(
+        sender=test_account.address,
+        sp=sp,
+        index=TestnetAssetId.USDC,
+        receiver=zaibatsu_service_client.app_address,
+        amt=txn_amt,
+    )
+    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=test_account.signer)
+
+    loan_unit_id = random.randint(1, 1000000)
+    encoded_loan_unit_id = encode_id_to_base64(loan_unit_id)
+
+    complete_args = CompleteLoanArgs(
+        loan_unit_name=encoded_loan_unit_id,
+        lender_nft_image_url="",
+        borrower_nft_image_url="",
+        loan_hash=secrets.token_hex(16),
+    )
+    zaibatsu_service_client.complete_p2p_loan_purchase(
+        loan_key=loan_key.encode(),
+        completion_args=complete_args,
+        txn=txn,
+        principal_asset=TestnetAssetId.USDC,
+        borrower=creator_account.address,
         transaction_parameters=TransactionParameters(boxes=[(zaibatsu_service_client.app_id, loan_key.encode())]),
     )
 

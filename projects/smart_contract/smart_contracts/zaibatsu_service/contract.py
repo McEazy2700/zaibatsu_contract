@@ -45,6 +45,17 @@ class ZaibatsuService(ap.ARC4Contract):
         return False
 
     @a4.abimethod()
+    def opt_contract_into_asset(self, asset: ap.Asset) -> bool:
+        txn = ap.itxn.AssetTransfer(
+            asset_amount=0,
+            fee=1000,
+            xfer_asset=asset,
+            asset_receiver=ap.Global.current_application_address,
+        )
+        txn.submit()
+        return True
+
+    @a4.abimethod()
     def iniate_p2p_loan_purchase(
         self,
         loan_key: ap.Bytes,
@@ -71,13 +82,14 @@ class ZaibatsuService(ap.ARC4Contract):
         assert (
             loan_details.collateral_asset_id == txn.xfer_asset.id
         ), "The asset being transfered must be the collateral asset"
+
+        assert txn.asset_amount >= self.calculate_amt_plus_fee(
+            loan_details.collateral_asset_amount.native
+        ), "Insufficient txn asset_amount! Amount must be equal to collateral_asset_amount plus fees"
+
         assert (
-            op.btoi(loan_details.collateral_asset_amount.bytes) == txn.asset_amount
-        ), "The amount of asset transfered must equal the amount specified"
-        assert (
-            op.btoi(loan_details.payment_completion_timestamp.bytes) > op.Global.latest_timestamp
+            loan_details.payment_completion_timestamp.native > op.Global.latest_timestamp
         ), "The payment completion timestamp must be greater than now"
-        self._opt_contract_into_asset(txn.xfer_asset)
 
         loan_details.collateral_paid = a4.Bool(True)  # noqa: FBT003
 
@@ -87,36 +99,59 @@ class ZaibatsuService(ap.ARC4Contract):
 
     @ap.arc4.abimethod()
     def complete_p2p_loan_purchase(
-        self, completion_args: CompleteLoanArgs, txn: gtxn.AssetTransferTransaction
+        self,
+        loan_key: ap.Bytes,
+        completion_args: CompleteLoanArgs,
+        principal_asset: ap.Asset,
+        borrower: ap.Account,
+        txn: gtxn.AssetTransferTransaction,
     ) -> LoanDetails:
-        [loan_bytes, exists] = op.Box.get(completion_args.loan_key.bytes)
+        assert (
+            txn.asset_receiver == Global.current_application_address
+        ), "The recipient must be the ZaibatsuService address"
+
+        [loan_bytes, exists] = op.Box.get(loan_key)
         assert exists, "A reccord with the loan_key passed was not found"
         details = LoanDetails.from_bytes(loan_bytes)
         assert details.collateral_paid, "The loan collateral must have been paid by this point"
         assert not details.principal_paid, "The principal must not have been paid"
-        assert txn.asset_receiver == details.borrower, "The borrower must be the reciever"
-        assert txn.xfer_asset.id == details.principal_asset_id, "The asset transfered must be the same as the principal"
-
         assert (
-            txn.asset_amount == details.lend_asset_amount
-        ), "The asset transfered must equal the lend_asset_amount recorded"
+            txn.xfer_asset.id == details.principal_asset_id.native
+        ), "The asset transfered must be the same as the principal"
+        assert borrower == details.borrower.native, "The borrower must be the borrower in the loan details"
+        assert (
+            principal_asset.id == details.principal_asset_id.native
+        ), "The asset passed must be the same as the principal"
+
+        assert txn.asset_amount >= self.calculate_amt_plus_fee(
+            details.principal_asset_amount.native
+        ), "Insufficient txn asset_amount! Amount must be equal to principal_asset_amount plus fees"
+
+        completion_txn = ap.itxn.AssetTransfer(
+            fee=1000,
+            xfer_asset=details.principal_asset_id.native,
+            asset_receiver=details.borrower.native,
+            asset_amount=details.principal_asset_amount.native,
+        )
+        completion_txn.submit()
+
         details.principal_paid = a4.Bool(True)  # noqa: FBT003
         details.completed_payment_rounds = a4.UInt8(0)
         borrower_nft = self.create_loan_nft(
             completion_args.borrower_nft_image_url,
-            op.concat(ap.Bytes(b"B"), completion_args.loan_number.native.bytes),
-            op.concat(ap.Bytes(b"ZAI-L #B"), completion_args.loan_number.native.bytes),
+            op.concat(ap.Bytes(b"B-"), completion_args.loan_unit_name.bytes),
+            op.concat(ap.Bytes(b"#B-"), completion_args.loan_unit_name.bytes),
             completion_args.loan_hash,
         )
         lender_nft = self.create_loan_nft(
             completion_args.lender_nft_image_url,
-            op.concat(ap.Bytes(b"L"), completion_args.loan_number.native.bytes),
-            op.concat(ap.Bytes(b"ZAI-L #L"), completion_args.loan_number.native.bytes),
+            op.concat(ap.Bytes(b"L-"), completion_args.loan_unit_name.bytes),
+            op.concat(ap.Bytes(b"#L-"), completion_args.loan_unit_name.bytes),
             completion_args.loan_hash,
         )
         details.borrower_nft_asser_id = A4UInt64(borrower_nft.id)
         details.lender_nft_asser_id = A4UInt64(lender_nft.id)
-        op.Box.put(completion_args.loan_key.native.bytes, details.bytes)
+        op.Box.put(loan_key, details.bytes)
         return details
 
     @ap.subroutine
@@ -128,6 +163,7 @@ class ZaibatsuService(ap.ARC4Contract):
             url=image_url.native,
             unit_name=short_name,
             asset_name=logn_name,
+            fee=1000,
             metadata_hash=loan_hash.native.bytes,
             manager=op.Global.current_application_address,
             reserve=op.Global.current_application_address,
@@ -138,6 +174,14 @@ class ZaibatsuService(ap.ARC4Contract):
         return op.ITxn.created_asset_id()
 
     @ap.subroutine
+    def calculate_amt_plus_fee(self, amt: ap.UInt64) -> ap.UInt64:
+        fee_percentage = ap.UInt64(5)
+        amt_adjusted_for_decimal = amt * ap.UInt64(10)
+        approx_fee_plus_amt = self.percentage_increase(A4UInt64(amt_adjusted_for_decimal), A4UInt64(fee_percentage))
+        corrected_approx_fee_plus_amt = approx_fee_plus_amt.native // ap.UInt64(10)
+        return corrected_approx_fee_plus_amt
+
+    @ap.subroutine
     def get_asset_price(self, folks_feed_oracle: ap.Application, asa: ap.Asset) -> ap.UInt64:
         [value, exists] = op.AppGlobal.get_ex_bytes(folks_feed_oracle, op.itob(asa.id))
         assert exists, "This aset is not supported"
@@ -145,11 +189,7 @@ class ZaibatsuService(ap.ARC4Contract):
 
     @ap.subroutine
     def percentage(self, amount: A4UInt64, percent: A4UInt64) -> A4UInt64:
-        """
-        This callculates percentage of a number assuming the percent has been multiplied
-        by 100 to account for the lack of decimal precision
-        """
-        result = ((percent.native // ap.UInt64(100)) * amount.native) // ap.UInt64(100)
+        result = (percent.native * amount.native) // ap.UInt64(100)
         return A4UInt64(result)
 
     @ap.subroutine
@@ -157,13 +197,3 @@ class ZaibatsuService(ap.ARC4Contract):
         percentage = self.percentage(amount, increase)
         results = percentage.native + amount.native
         return A4UInt64(results)
-
-    @ap.subroutine
-    def _opt_contract_into_asset(self, asset_id: ap.Asset) -> bool:
-        txn = ap.itxn.AssetTransfer(
-            xfer_asset=asset_id,
-            fee=1000,
-            asset_receiver=ap.Global.current_application_address,
-        )
-        txn.submit()
-        return True
