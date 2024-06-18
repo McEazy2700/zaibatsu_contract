@@ -10,6 +10,7 @@ from algosdk import mnemonic
 from algosdk.v2client.algod import AlgodClient
 from algosdk.v2client.indexer import IndexerClient
 from dotenv import load_dotenv
+from folksfeedsdk.folks_feed_client import FolksFeedClient
 
 from tests.utils import unwrap_env_var
 
@@ -41,3 +42,8 @@ def creator_account() -> Account:
 def test_account() -> Account:
     test_account_mnemonics = unwrap_env_var("TEST_DEPLOYER_MNEMONIC")
     return Account(private_key=mnemonic.to_private_key(test_account_mnemonics))
+
+
+@pytest.fixture(scope="session")
+def ffo_client(algod_client: AlgodClient, indexer_client: IndexerClient) -> FolksFeedClient:
+    return FolksFeedClient(algod_client=algod_client, indexer_client=indexer_client, app_id=159512493)

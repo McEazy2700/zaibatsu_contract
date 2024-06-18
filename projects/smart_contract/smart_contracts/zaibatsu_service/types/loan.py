@@ -1,6 +1,6 @@
 from typing import Literal, TypeAlias
 
-from algopy.arc4 import (
+from algopy.arc4 import (  # pyright: ignore
     Address,
     Bool,
     DynamicArray,

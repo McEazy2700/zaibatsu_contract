@@ -1,7 +1,9 @@
+import math
 import random
 import secrets
 from datetime import datetime, timedelta
 
+from folksfeedsdk.folks_feed_client import FolksFeedClient
 import pytest
 from algokit_utils import Account, TransactionParameters
 from algokit_utils.config import config
@@ -45,24 +47,25 @@ def zaibatsu_service_client(algod_client: AlgodClient, creator_account: Account)
     return client
 
 
-# @pytest.mark.skip()
-def test_update(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
-    zaibatsu_service_client.update_update()
-
-
-# @pytest.mark.skip()
-def test_says_hello(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
-    result = zaibatsu_service_client.hello(name="World")
-
-    assert result.return_value == "Hello, World"
-
-
 @pytest.fixture(scope="session")
 def loan_key() -> str:
     loan_key = secrets.token_hex(4)
     return loan_key
 
 
+# @pytest.mark.skip()
+def test_update(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
+    zaibatsu_service_client.update_update()
+
+
+@pytest.mark.skip()
+def test_says_hello(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
+    result = zaibatsu_service_client.hello(name="World")
+
+    assert result.return_value == "Hello, World"
+
+
+# @pytest.mark.skip()
 def test_opt_contract_into_asset(zaibatsu_service_client: ZaibatsuServiceClient):
     result1 = zaibatsu_service_client.opt_contract_into_asset(asset=TestnetAssetId.USDC)
     result2 = zaibatsu_service_client.opt_contract_into_asset(asset=TestnetAssetId.USDt)
@@ -70,6 +73,32 @@ def test_opt_contract_into_asset(zaibatsu_service_client: ZaibatsuServiceClient)
 
 
 # @pytest.mark.skip()
+def test_authorize_pool_creation(
+    zaibatsu_service_client: ZaibatsuServiceClient,
+    algod_client: AlgodClient,
+    creator_account: Account,
+    ffo_client: FolksFeedClient,
+):
+    asset_info = ffo_client.get_asset_info(TestnetAssetId.USDC)
+    asset_amount = math.ceil((20 * 6) / asset_info.price)
+    amt_plus_fee = calc_amount_plus_fee(asset_amount)
+
+    sp = algod_client.suggested_params()
+    txn = transaction.AssetTransferTxn(
+        sp=sp,
+        amt=amt_plus_fee,
+        sender=creator_account.address,
+        receiver=zaibatsu_service_client.app_address,
+        index=TestnetAssetId.USDC,
+    )
+    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
+    result = zaibatsu_service_client.authorize_pool_creation(
+        txn=txn, folks_feed_oracle=FOLKS_FEED_ORACLE_TESTNET_ID, asset_decimals=6
+    )
+    print(amt_plus_fee, result.return_value.initial_amount)
+
+
+@pytest.mark.skip()
 def test_iniate_p2p_loan_purchase(
     zaibatsu_service_client: ZaibatsuServiceClient,
     algod_client: AlgodClient,
@@ -80,7 +109,6 @@ def test_iniate_p2p_loan_purchase(
     completion_timestamp = round((datetime.now() + timedelta(weeks=52)).timestamp())
     collateral_amt = 16000
     txn_amt = calc_amount_plus_fee(collateral_amt)
-    print(txn_amt)
 
     loan_details = LoanDetails(
         loan_type="P2P",
@@ -121,7 +149,7 @@ def test_iniate_p2p_loan_purchase(
     )
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_complete_p2p_loan_purchase(
     algod_client: AlgodClient,
     zaibatsu_service_client: ZaibatsuServiceClient,
@@ -132,7 +160,6 @@ def test_complete_p2p_loan_purchase(
     sp = algod_client.suggested_params()
     principal_amt = 500
     txn_amt = calc_amount_plus_fee(principal_amt)
-    print(txn_amt)
 
     txn = transaction.AssetTransferTxn(
         sender=test_account.address,
@@ -163,16 +190,16 @@ def test_complete_p2p_loan_purchase(
 
 
 # @pytest.mark.skip()
-def test_simulate_says_hello_with_correct_budget_consumed(
-    zaibatsu_service_client: ZaibatsuServiceClient,
-) -> None:
-    result = zaibatsu_service_client.compose().hello(name="World").hello(name="Jane").simulate()
-
-    assert result.abi_results[0].return_value == "Hello, World"
-    assert result.abi_results[1].return_value == "Hello, Jane"
-    assert result.simulate_response["txn-groups"][0]["app-budget-consumed"] < 100
-
-
-@pytest.mark.skip()
-def test_delete(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
-    zaibatsu_service_client.delete_delete()
+# def test_simulate_says_hello_with_correct_budget_consumed(
+#     zaibatsu_service_client: ZaibatsuServiceClient,
+# ) -> None:
+#     result = zaibatsu_service_client.compose().hello(name="World").hello(name="Jane").simulate()
+#
+#     assert result.abi_results[0].return_value == "Hello, World"
+#     assert result.abi_results[1].return_value == "Hello, Jane"
+#     assert result.simulate_response["txn-groups"][0]["app-budget-consumed"] < 100
+#
+#
+# @pytest.mark.skip()
+# def test_delete(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
+#     zaibatsu_service_client.delete_delete()

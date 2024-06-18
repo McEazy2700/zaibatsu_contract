@@ -1,13 +1,9 @@
 import algopy as ap
-from algopy import Global, gtxn, op
-from algopy import arc4 as a4
+from algopy import Global, gtxn, op  # pyright: ignore
+from algopy import arc4 as a4  # pyright: ignore
 
-from smart_contracts.zaibatsu_service.types.loan import (
-    A4UInt64,
-    AddressArray,
-    CompleteLoanArgs,
-    LoanDetails,
-)
+from smart_contracts.zaibatsu_service.types.loan import A4UInt64, AddressArray, CompleteLoanArgs, LoanDetails
+from smart_contracts.zaibatsu_service.types.pool import PoolCreationApproval
 
 
 class ZaibatsuService(ap.ARC4Contract):
@@ -54,6 +50,23 @@ class ZaibatsuService(ap.ARC4Contract):
         )
         txn.submit()
         return True
+
+    @a4.abimethod()
+    def authorize_pool_creation(
+        self, txn: gtxn.AssetTransferTransaction, folks_feed_oracle: ap.Application, asset_decimals: ap.UInt64
+    ) -> PoolCreationApproval:
+        assert (
+            txn.asset_receiver == ap.Global.current_application_address
+        ), "The recipient must be the application address"
+        amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount)
+        fee_amount = amount_plus_transaction_fee - txn.asset_amount
+        pool_fund_amount = txn.asset_amount - fee_amount
+
+        asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
+        pool_fund_dollar_amount = (asset_dollar_price * pool_fund_amount) // asset_decimals
+        assert pool_fund_dollar_amount > ap.UInt64(20), "The asset_amount must be worth greater that 20 dollars"
+        approval = PoolCreationApproval(initial_amount=A4UInt64(pool_fund_amount), success=a4.Bool(True))
+        return approval
 
     @a4.abimethod()
     def iniate_p2p_loan_purchase(
@@ -123,10 +136,7 @@ class ZaibatsuService(ap.ARC4Contract):
             principal_asset.id == details.principal_asset_id.native
         ), "The asset passed must be the same as the principal"
 
-        assert txn.asset_amount >= self.calculate_amt_plus_fee(
-            details.principal_asset_amount.native
-        ), "Insufficient txn asset_amount! Amount must be equal to principal_asset_amount plus fees"
-
+        self.ensure_transaction_fee_on_amount(txn, details.principal_asset_amount.native)
         completion_txn = ap.itxn.AssetTransfer(
             fee=1000,
             xfer_asset=details.principal_asset_id.native,
@@ -172,6 +182,13 @@ class ZaibatsuService(ap.ARC4Contract):
         )
         txn.submit()
         return op.ITxn.created_asset_id()
+
+    @ap.subroutine
+    def ensure_transaction_fee_on_amount(self, txn: gtxn.AssetTransferTransaction, amount: ap.UInt64) -> bool:
+        assert txn.asset_amount >= self.calculate_amt_plus_fee(
+            amount
+        ), "Insufficient txn asset_amount! Amount must be equal to principal_asset_amount plus fees"
+        return True
 
     @ap.subroutine
     def calculate_amt_plus_fee(self, amt: ap.UInt64) -> ap.UInt64:
