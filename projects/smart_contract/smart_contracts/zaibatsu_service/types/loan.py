@@ -25,6 +25,7 @@ PaymentReciepientArray: TypeAlias = DynamicArray[PaymentReciepient]
 
 
 class LoanDetails(Struct, kw_only=True):
+    loan_key: String
     loan_type: String  # "P2P" | "DAO" | "ZAIBATSU"
     tenure: UInt8
     principal_asset_id: A4UInt64
@@ -36,7 +37,6 @@ class LoanDetails(Struct, kw_only=True):
     payment_rounds: UInt8
     payment_completion_timestamp: A4UInt64
     payment_recipients: PaymentReciepientArray
-    image_url: String
     collateral_paid: Bool
     principal_paid: Bool
     completed_payment_rounds: UInt8

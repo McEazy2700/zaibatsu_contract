@@ -3,7 +3,7 @@ from algopy import Global, gtxn, op  # pyright: ignore
 from algopy import arc4 as a4  # pyright: ignore
 
 from smart_contracts.zaibatsu_service.types.loan import A4UInt64, AddressArray, CompleteLoanArgs, LoanDetails
-from smart_contracts.zaibatsu_service.types.pool import PoolCreationApproval
+from smart_contracts.zaibatsu_service.types.pool import PoolFundResponse
 
 
 class ZaibatsuService(ap.ARC4Contract):
@@ -53,8 +53,11 @@ class ZaibatsuService(ap.ARC4Contract):
 
     @a4.abimethod()
     def authorize_pool_creation(
-        self, txn: gtxn.AssetTransferTransaction, folks_feed_oracle: ap.Application, asset_decimals: ap.UInt64
-    ) -> PoolCreationApproval:
+        self,
+        txn: gtxn.AssetTransferTransaction,
+        folks_feed_oracle: ap.Application,
+        asset_decimals_multiplier: ap.UInt64,
+    ) -> PoolFundResponse:
         assert (
             txn.asset_receiver == ap.Global.current_application_address
         ), "The recipient must be the application address"
@@ -63,13 +66,25 @@ class ZaibatsuService(ap.ARC4Contract):
         pool_fund_amount = txn.asset_amount - fee_amount
 
         asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
-        pool_fund_dollar_amount = (asset_dollar_price * pool_fund_amount) // asset_decimals
+        pool_fund_dollar_amount = (asset_dollar_price * pool_fund_amount) // asset_decimals_multiplier
         assert pool_fund_dollar_amount > ap.UInt64(20), "The asset_amount must be worth greater that 20 dollars"
-        approval = PoolCreationApproval(initial_amount=A4UInt64(pool_fund_amount), success=a4.Bool(True))
+        approval = PoolFundResponse(amount=A4UInt64(pool_fund_amount), success=a4.Bool(True))
         return approval
 
     @a4.abimethod()
-    def iniate_p2p_loan_purchase(
+    def fund_pool(self, txn: gtxn.AssetTransferTransaction) -> PoolFundResponse:
+        assert (
+            txn.asset_receiver == ap.Global.current_application_address
+        ), "The recipient must be the application address"
+        amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount)
+        fee_amount = amount_plus_transaction_fee - txn.asset_amount
+        pool_fund_amount = txn.asset_amount - fee_amount
+
+        approval = PoolFundResponse(amount=A4UInt64(pool_fund_amount), success=a4.Bool(True))
+        return approval
+
+    @a4.abimethod()
+    def initiate_p2p_loan_purchase(
         self,
         loan_key: ap.Bytes,
         folks_feed_oracle: ap.Application,
@@ -149,13 +164,13 @@ class ZaibatsuService(ap.ARC4Contract):
         details.completed_payment_rounds = a4.UInt8(0)
         borrower_nft = self.create_loan_nft(
             completion_args.borrower_nft_image_url,
-            op.concat(ap.Bytes(b"B-"), completion_args.loan_unit_name.bytes),
+            op.concat(ap.Bytes(b"B"), completion_args.loan_unit_name.bytes),
             op.concat(ap.Bytes(b"#B-"), completion_args.loan_unit_name.bytes),
             completion_args.loan_hash,
         )
         lender_nft = self.create_loan_nft(
             completion_args.lender_nft_image_url,
-            op.concat(ap.Bytes(b"L-"), completion_args.loan_unit_name.bytes),
+            op.concat(ap.Bytes(b"L"), completion_args.loan_unit_name.bytes),
             op.concat(ap.Bytes(b"#L-"), completion_args.loan_unit_name.bytes),
             completion_args.loan_hash,
         )

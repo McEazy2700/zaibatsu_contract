@@ -25,6 +25,10 @@ def decode_base64_to_id(encoded_id: str) -> int:
     return loan
 
 
+def get_multiplier_for_decimal_places(decimal_places: int) -> int:
+    return pow(10, decimal_places)
+
+
 #
 #
 # def calc_contract_percentage(amount: int, percent: int) -> int:
