@@ -27,7 +27,9 @@ def test_set_service_contract_address(
     zaibatsu_auth_client: ZaibatsuAuthClient,
     zaibatsu_service_client: ZaibatsuServiceClient,
 ):
-    zaibatsu_auth_client.set_service_contract_address(address=zaibatsu_service_client.app_address)
+    zaibatsu_auth_client.set_service_contract_address(
+        address=zaibatsu_service_client.app_address
+    )
 
 
 # @pytest.mark.skip()
@@ -51,7 +53,9 @@ def test_authorize_pool_creation(
         receiver=zaibatsu_service_client.app_address,
         index=TestnetAssetId.USDC,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
+    txn = atomic_transaction_composer.TransactionWithSigner(
+        txn=txn, signer=creator_account.signer
+    )
     result = zaibatsu_auth_client.authorize_pool_creation(
         txn=txn,
         folks_feed_oracle=FOLKS_FEED_ORACLE_TESTNET_ID,
@@ -75,6 +79,7 @@ def test_fund_pool(
         receiver=zaibatsu_service_client.app_address,
         index=TestnetAssetId.USDC,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
-    result = zaibatsu_auth_client.fund_pool(txn=txn)
-    print(result.return_value)
+    txn = atomic_transaction_composer.TransactionWithSigner(
+        txn=txn, signer=creator_account.signer
+    )
+    zaibatsu_auth_client.fund_pool(txn=txn)

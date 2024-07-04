@@ -35,7 +35,7 @@ class ZaibatsuAuthorizationAndDao(ZaibatsuBase):
     @a4.abimethod()
     def set_service_contract_address(self, address: a4.Address) -> bool:
         self.authorise_txn()
-        self.service_contract_address = address.copy()
+        self.service_contract_address = address
         return True
 
     @a4.abimethod()
@@ -48,13 +48,19 @@ class ZaibatsuAuthorizationAndDao(ZaibatsuBase):
         assert (
             txn.asset_receiver == self.service_contract_address.native
         ), "The asset_receiver mut be the ZaibatsuService account"
-        amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount, ap.UInt64(1))
+        amount_plus_transaction_fee = self.calculate_amt_plus_fee(
+            txn.asset_amount, ap.UInt64(1)
+        )
         fee_amount = amount_plus_transaction_fee - txn.asset_amount
         pool_fund_amount = txn.asset_amount - fee_amount
 
         asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
-        pool_fund_dollar_amount = (asset_dollar_price * pool_fund_amount) // asset_decimals_multiplier
-        assert pool_fund_dollar_amount > ap.UInt64(20), "The asset_amount must be worth greater that 20 dollars"
+        pool_fund_dollar_amount = (
+            asset_dollar_price * pool_fund_amount
+        ) // asset_decimals_multiplier
+        assert pool_fund_dollar_amount > ap.UInt64(
+            20
+        ), "The asset_amount must be worth greater that 20 dollars"
         approval = PoolFundResponse(
             amount=a4.UInt64(pool_fund_amount),
             success=a4.Bool(True),  # noqa: FBT003
@@ -69,7 +75,9 @@ class ZaibatsuAuthorizationAndDao(ZaibatsuBase):
         assert (
             txn.asset_receiver == self.service_contract_address.native
         ), "The asset_receiver mut be the ZaibatsuService account"
-        amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount, ap.UInt64(1))
+        amount_plus_transaction_fee = self.calculate_amt_plus_fee(
+            txn.asset_amount, ap.UInt64(1)
+        )
         fee_amount = amount_plus_transaction_fee - txn.asset_amount
         pool_fund_amount = txn.asset_amount - fee_amount
 

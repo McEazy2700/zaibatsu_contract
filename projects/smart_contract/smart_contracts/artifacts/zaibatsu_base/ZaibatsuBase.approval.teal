@@ -113,9 +113,13 @@ create:
     // smart_contracts/zaibatsu_base/contract.py:18
     // self.admins.append(a4.Address(ap.Txn.sender))
     int 0
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
     byte "admins"
+    // smart_contracts/zaibatsu_base/contract.py:18
+    // self.admins.append(a4.Address(ap.Txn.sender))
     app_global_get_ex
-    assert // check admins exists
+    assert // check self.admins exists
     extract 2 0
     txn Sender
     concat
@@ -124,10 +128,14 @@ create:
     int 32
     /
     itob
-    extract 6 0
+    extract 6 2
     swap
     concat
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
     byte "admins"
+    // smart_contracts/zaibatsu_base/contract.py:18
+    // self.admins.append(a4.Address(ap.Txn.sender))
     swap
     app_global_put
     // smart_contracts/zaibatsu_base/contract.py:19
@@ -160,9 +168,13 @@ update_after_if_else@2:
     // smart_contracts/zaibatsu_base/contract.py:25
     // for index in ap.urange(self.admins.length):
     int 0
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
     byte "admins"
+    // smart_contracts/zaibatsu_base/contract.py:25
+    // for index in ap.urange(self.admins.length):
     app_global_get_ex
-    assert // check admins exists
+    assert // check self.admins exists
     int 0
     extract_uint16
     frame_bury 1
@@ -179,24 +191,19 @@ update_for_header@3:
     // smart_contracts/zaibatsu_base/contract.py:26
     // if self.admins[index] == ap.Txn.sender:
     int 0
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
     byte "admins"
+    // smart_contracts/zaibatsu_base/contract.py:26
+    // if self.admins[index] == ap.Txn.sender:
     app_global_get_ex
-    assert // check admins exists
-    dup
-    int 0
-    extract_uint16
-    frame_dig 0
-    dup
-    uncover 2
-    <
-    assert // Index access is out of bounds
-    swap
+    assert // check self.admins exists
     extract 2 0
-    swap
+    frame_dig 0
     int 32
     *
     int 32
-    extract3
+    extract3 // on error: Index access is out of bounds
     txn Sender
     ==
     bz update_after_if_else@6
