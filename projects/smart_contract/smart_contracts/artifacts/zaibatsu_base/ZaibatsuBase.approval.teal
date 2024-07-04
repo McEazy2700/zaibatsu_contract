@@ -1,0 +1,317 @@
+#pragma version 10
+
+smart_contracts.zaibatsu_base.contract.ZaibatsuBase.approval_program:
+    txn ApplicationID
+    bnz main_entrypoint@2
+    callsub __init__
+
+main_entrypoint@2:
+    // smart_contracts/zaibatsu_base/contract.py:11
+    // class ZaibatsuBase(ap.ARC4Contract):
+    method "create()bool"
+    method "update()bool"
+    method "delete()bool"
+    method "opt_contract_into_asset(asset)bool"
+    txna ApplicationArgs 0
+    match main_create_route@3 main_update_route@4 main_delete_route@5 main_opt_contract_into_asset_route@6
+    err // reject transaction
+
+main_create_route@3:
+    // smart_contracts/zaibatsu_base/contract.py:16
+    // @a4.abimethod(create="allow")
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    callsub create
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_update_route@4:
+    // smart_contracts/zaibatsu_base/contract.py:21
+    // @a4.abimethod(allow_actions=["UpdateApplication"])
+    txn OnCompletion
+    int UpdateApplication
+    ==
+    assert // OnCompletion is UpdateApplication
+    txn ApplicationID
+    assert // is not creating
+    callsub update
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_delete_route@5:
+    // smart_contracts/zaibatsu_base/contract.py:30
+    // @a4.abimethod(allow_actions=["DeleteApplication"])
+    txn OnCompletion
+    int DeleteApplication
+    ==
+    assert // OnCompletion is DeleteApplication
+    txn ApplicationID
+    assert // is not creating
+    callsub delete
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_opt_contract_into_asset_route@6:
+    // smart_contracts/zaibatsu_base/contract.py:36
+    // @a4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/zaibatsu_base/contract.py:11
+    // class ZaibatsuBase(ap.ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    txnas Assets
+    // smart_contracts/zaibatsu_base/contract.py:36
+    // @a4.abimethod()
+    callsub opt_contract_into_asset
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.create() -> uint64:
+create:
+    // smart_contracts/zaibatsu_base/contract.py:16-17
+    // @a4.abimethod(create="allow")
+    // def create(self) -> bool:
+    proto 0 1
+    // smart_contracts/zaibatsu_base/contract.py:18
+    // self.admins.append(a4.Address(ap.Txn.sender))
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check admins exists
+    extract 2 0
+    txn Sender
+    concat
+    dup
+    len
+    int 32
+    /
+    itob
+    extract 6 0
+    swap
+    concat
+    byte "admins"
+    swap
+    app_global_put
+    // smart_contracts/zaibatsu_base/contract.py:19
+    // return True
+    int 1
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.update() -> uint64:
+update:
+    // smart_contracts/zaibatsu_base/contract.py:21-22
+    // @a4.abimethod(allow_actions=["UpdateApplication"])
+    // def update(self) -> bool:
+    proto 0 1
+    byte ""
+    dup
+    // smart_contracts/zaibatsu_base/contract.py:23
+    // if ap.Txn.sender == op.Global.creator_address:
+    txn Sender
+    global CreatorAddress
+    ==
+    bz update_after_if_else@2
+    // smart_contracts/zaibatsu_base/contract.py:24
+    // return True
+    int 1
+    frame_bury 0
+    retsub
+
+update_after_if_else@2:
+    // smart_contracts/zaibatsu_base/contract.py:25
+    // for index in ap.urange(self.admins.length):
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check admins exists
+    int 0
+    extract_uint16
+    frame_bury 1
+    int 0
+    frame_bury 0
+
+update_for_header@3:
+    // smart_contracts/zaibatsu_base/contract.py:25
+    // for index in ap.urange(self.admins.length):
+    frame_dig 0
+    frame_dig 1
+    <
+    bz update_after_for@9
+    // smart_contracts/zaibatsu_base/contract.py:26
+    // if self.admins[index] == ap.Txn.sender:
+    int 0
+    byte "admins"
+    app_global_get_ex
+    assert // check admins exists
+    dup
+    int 0
+    extract_uint16
+    frame_dig 0
+    dup
+    uncover 2
+    <
+    assert // Index access is out of bounds
+    swap
+    extract 2 0
+    swap
+    int 32
+    *
+    int 32
+    extract3
+    txn Sender
+    ==
+    bz update_after_if_else@6
+    // smart_contracts/zaibatsu_base/contract.py:27
+    // return True
+    int 1
+    frame_bury 0
+    retsub
+
+update_after_if_else@6:
+    // smart_contracts/zaibatsu_base/contract.py:25
+    // for index in ap.urange(self.admins.length):
+    frame_dig 0
+    int 1
+    +
+    frame_bury 0
+    b update_for_header@3
+
+update_after_for@9:
+    // smart_contracts/zaibatsu_base/contract.py:28
+    // return False
+    int 0
+    frame_bury 0
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.delete() -> uint64:
+delete:
+    // smart_contracts/zaibatsu_base/contract.py:30-31
+    // @a4.abimethod(allow_actions=["DeleteApplication"])
+    // def delete(self) -> bool:
+    proto 0 1
+    // smart_contracts/zaibatsu_base/contract.py:32
+    // if ap.Txn.sender == op.Global.creator_address:
+    txn Sender
+    global CreatorAddress
+    ==
+    bz delete_after_if_else@2
+    // smart_contracts/zaibatsu_base/contract.py:33
+    // return True
+    int 1
+    retsub
+
+delete_after_if_else@2:
+    // smart_contracts/zaibatsu_base/contract.py:34
+    // return False
+    int 0
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.opt_contract_into_asset(asset: uint64) -> uint64:
+opt_contract_into_asset:
+    // smart_contracts/zaibatsu_base/contract.py:36-37
+    // @a4.abimethod()
+    // def opt_contract_into_asset(self, asset: ap.Asset) -> bool:
+    proto 1 1
+    // smart_contracts/zaibatsu_base/contract.py:38
+    // self.opt_app_into_asset(asset)
+    frame_dig -1
+    callsub opt_app_into_asset
+    // smart_contracts/zaibatsu_base/contract.py:39
+    // return True
+    int 1
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.opt_app_into_asset(asset: uint64) -> void:
+opt_app_into_asset:
+    // smart_contracts/zaibatsu_base/contract.py:41-45
+    // ################################################################
+    // #####################   Subroutines    #########################
+    // ################################################################
+    // @ap.subroutine
+    // def opt_app_into_asset(self, asset: ap.Asset) -> None:
+    proto 1 0
+    // smart_contracts/zaibatsu_base/contract.py:50
+    // asset_receiver=ap.Global.current_application_address,
+    global CurrentApplicationAddress
+    // smart_contracts/zaibatsu_base/contract.py:52
+    // txn.submit()
+    itxn_begin
+    itxn_field AssetReceiver
+    frame_dig -1
+    itxn_field XferAsset
+    // smart_contracts/zaibatsu_base/contract.py:47
+    // asset_amount=0,
+    int 0
+    itxn_field AssetAmount
+    // smart_contracts/zaibatsu_base/contract.py:46
+    // txn = ap.itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    // smart_contracts/zaibatsu_base/contract.py:48
+    // fee=1000,
+    int 1000
+    itxn_field Fee
+    // smart_contracts/zaibatsu_base/contract.py:52
+    // txn.submit()
+    itxn_submit
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.__init__() -> void:
+__init__:
+    // smart_contracts/zaibatsu_base/contract.py:12
+    // def __init__(self) -> None:
+    proto 0 0
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
+    byte "admins"
+    byte 0x0000
+    app_global_put
+    // smart_contracts/zaibatsu_base/contract.py:14
+    // self.service_contract: a4.Address = a4.Address()
+    byte "service_contract"
+    global ZeroAddress
+    app_global_put
+    retsub

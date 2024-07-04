@@ -6,12 +6,17 @@ from algokit_utils import (
     get_algod_client,
     get_indexer_client,
 )
+from algokit_utils.config import config
 from algosdk import mnemonic
 from algosdk.v2client.algod import AlgodClient
 from algosdk.v2client.indexer import IndexerClient
+from artifacts.zaibatsu_service.client import ZaibatsuServiceClient
 from dotenv import load_dotenv
 from folksfeedsdk.folks_feed_client import FolksFeedClient
 
+from smart_contracts.artifacts.zaibatsu_authorization_and_dao.client import (
+    ZaibatsuAuthorizationAndDaoClient as ZaibatsuAuthClient,
+)
 from tests.utils import unwrap_env_var
 
 
@@ -45,5 +50,54 @@ def test_account() -> Account:
 
 
 @pytest.fixture(scope="session")
-def ffo_client(algod_client: AlgodClient, indexer_client: IndexerClient) -> FolksFeedClient:
-    return FolksFeedClient(algod_client=algod_client, indexer_client=indexer_client, app_id=159512493)
+def ffo_client(
+    algod_client: AlgodClient, indexer_client: IndexerClient
+) -> FolksFeedClient:
+    return FolksFeedClient(
+        algod_client=algod_client, indexer_client=indexer_client, app_id=159512493
+    )
+
+
+@pytest.fixture(scope="session")
+def zaibatsu_service_client(
+    algod_client: AlgodClient, creator_account: Account
+) -> ZaibatsuServiceClient:
+    config.configure(
+        debug=True,
+        # trace_all=True,
+    )
+
+    client = ZaibatsuServiceClient(
+        algod_client,
+        app_id=672950882,
+        signer=creator_account.signer,
+    )
+    return client
+
+
+@pytest.fixture(scope="session")
+def zaibatsu_auth_client(
+    algod_client: AlgodClient,
+    creator_account: Account,
+) -> ZaibatsuAuthClient:
+    config.configure(
+        debug=True,
+        # trace_all=True,
+    )
+
+    client = ZaibatsuAuthClient(
+        algod_client,
+        app_id=694505037,
+        signer=creator_account.signer,
+    )
+
+    # client.deploy(
+    #     version="0.1",
+    #     signer=creator_account.signer,
+    #     on_schema_break=algokit_utils.OnSchemaBreak.ReplaceApp,
+    #     on_update=algokit_utils.OnUpdate.ReplaceApp,
+    #     create_args=DeployCreate[CreateArgs](args=CreateArgs()),
+    #     update_args=Deploy[UpdateArgs](args=UpdateArgs()),
+    #     delete_args=Deploy[DeleteArgs](args=DeleteArgs()),
+    # )
+    return client

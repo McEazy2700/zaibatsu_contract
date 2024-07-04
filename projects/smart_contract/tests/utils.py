@@ -1,4 +1,5 @@
 import base64
+import math
 
 from decouple import config
 
@@ -29,13 +30,12 @@ def get_multiplier_for_decimal_places(decimal_places: int) -> int:
     return pow(10, decimal_places)
 
 
-#
-#
-# def calc_contract_percentage(amount: int, percent: int) -> int:
-#     result = (percent.native * amount.native) // ap.UInt64(100)
-#     return A4UInt64(result)
+def calc_contract_percentage(amount: int, percent: int) -> int:
+    result = (percent * amount) // 100
+    return result
 
 
-def calc_amount_plus_fee(amount: int) -> int:
-    percentage = (5 * (amount * 10)) // 100
-    return (percentage // 10) + amount
+def calc_amount_plus_fee(amount: int, multiples: int = 1) -> int:
+    percent = (0.5 * multiples) * 100
+    percentage = calc_contract_percentage(amount=amount, percent=percent)
+    return int(math.ceil(percentage + amount))

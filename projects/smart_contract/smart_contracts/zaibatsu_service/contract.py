@@ -1,99 +1,36 @@
+# pyright: reportMissingModuleSource=false
 import algopy as ap
-from algopy import Global, gtxn, op  # pyright: ignore
-from algopy import arc4 as a4  # pyright: ignore
+from algopy import arc4 as a4
+from algopy import gtxn, op
 
-from smart_contracts.zaibatsu_service.types.loan import A4UInt64, AddressArray, CompleteLoanArgs, LoanDetails
-from smart_contracts.zaibatsu_service.types.pool import PoolFundResponse
+from smart_contracts.zaibatsu_base.contract import ZaibatsuBase
+from smart_contracts.zaibatsu_service.types.loan import (
+    A4UInt64,
+    CleanUpLoanRepaymentResponse,
+    CompleteLoanArgs,
+    ExecuteLoanRepaymentResponse,
+    LoanDetails,
+    PaymentReciepient,
+    PendingLoanRepayment,
+)
 
 
-class ZaibatsuService(ap.ARC4Contract):
+class ZaibatsuService(ZaibatsuBase):
     """
     ATTENTIONS!!!! THIS IS NOT A DRILL
     * All percentages comming into the smart contract must have been multiple
       by 100. This is to account for the lack of support for floats on the AVM
     """
 
-    def __init__(self) -> None:
-        self.admins: AddressArray = AddressArray()
-
-    @ap.arc4.abimethod()
-    def hello(self, name: a4.String) -> ap.arc4.String:
-        return "Hello, " + name
-
-    @a4.abimethod(create="allow")
-    def create(self) -> bool:
-        self.admins.append(a4.Address(ap.Txn.sender))
-        return True
-
-    @a4.abimethod(allow_actions=["UpdateApplication"])
-    def update(self) -> bool:
-        if ap.Txn.sender == op.Global.creator_address:
-            return True
-        for index in ap.urange(self.admins.length):
-            if self.admins[index] == ap.Txn.sender:
-                return True
-        return False
-
-    @a4.abimethod(allow_actions=["DeleteApplication"])
-    def delete(self) -> bool:
-        if ap.Txn.sender == op.Global.creator_address:
-            return True
-        return False
-
     @a4.abimethod()
-    def opt_contract_into_asset(self, asset: ap.Asset) -> bool:
-        txn = ap.itxn.AssetTransfer(
-            asset_amount=0,
-            fee=1000,
-            xfer_asset=asset,
-            asset_receiver=ap.Global.current_application_address,
-        )
-        txn.submit()
-        return True
-
-    @a4.abimethod()
-    def authorize_pool_creation(
-        self,
-        txn: gtxn.AssetTransferTransaction,
-        folks_feed_oracle: ap.Application,
-        asset_decimals_multiplier: ap.UInt64,
-    ) -> PoolFundResponse:
-        assert (
-            txn.asset_receiver == ap.Global.current_application_address
-        ), "The recipient must be the application address"
-        amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount)
-        fee_amount = amount_plus_transaction_fee - txn.asset_amount
-        pool_fund_amount = txn.asset_amount - fee_amount
-
-        asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
-        pool_fund_dollar_amount = (asset_dollar_price * pool_fund_amount) // asset_decimals_multiplier
-        assert pool_fund_dollar_amount > ap.UInt64(20), "The asset_amount must be worth greater that 20 dollars"
-        approval = PoolFundResponse(amount=A4UInt64(pool_fund_amount), success=a4.Bool(True))
-        return approval
-
-    @a4.abimethod()
-    def fund_pool(self, txn: gtxn.AssetTransferTransaction) -> PoolFundResponse:
-        assert (
-            txn.asset_receiver == ap.Global.current_application_address
-        ), "The recipient must be the application address"
-        amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount)
-        fee_amount = amount_plus_transaction_fee - txn.asset_amount
-        pool_fund_amount = txn.asset_amount - fee_amount
-
-        approval = PoolFundResponse(amount=A4UInt64(pool_fund_amount), success=a4.Bool(True))
-        return approval
-
-    @a4.abimethod()
-    def initiate_p2p_loan_purchase(
+    def initiate_loan_purchase(
         self,
         loan_key: ap.Bytes,
         folks_feed_oracle: ap.Application,
         loan_details: LoanDetails,
         txn: gtxn.AssetTransferTransaction,
     ) -> LoanDetails:
-        assert (
-            txn.asset_receiver == Global.current_application_address
-        ), "The recipient must be the ZaibatsuService address"
+        self.ensure_app_reciever(txn)
 
         val = op.Box.get(loan_key)
         assert not val[1], "A Loan purchase with this key has already been initiated"
@@ -101,10 +38,17 @@ class ZaibatsuService(ap.ARC4Contract):
         collateral_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
         assert collateral_price > 0, "The asa is of no value or is not supported"
 
-        assert loan_details.loan_type == a4.String("P2P"), "The loan must be a P2P loan"
+        assert (
+            loan_details.loan_type == a4.String("P2P")
+            or loan_details.loan_type == a4.String("DAO")
+            or loan_details.loan_type == a4.String("ZAIBATSU")
+        ), "The loan must be either P2P, DAO or ZAIBATSU"
+
+        if loan_details.loan_type == a4.String("P2P"):
+            assert loan_details.payment_recipients.length == ap.UInt64(1), "Only one recipient is allowed in a P2P loan"
+
         assert not loan_details.collateral_paid, "The loan collateral must not be paid"
         assert not loan_details.principal_paid, "The loan principal must not be paid"
-        assert loan_details.payment_recipients.length == ap.UInt64(1), "Only one recipient is allowed in a P2P loan"
         assert loan_details.borrower == txn.sender, "The sender must also be the borrower"
 
         assert (
@@ -112,7 +56,7 @@ class ZaibatsuService(ap.ARC4Contract):
         ), "The asset being transfered must be the collateral asset"
 
         assert txn.asset_amount >= self.calculate_amt_plus_fee(
-            loan_details.collateral_asset_amount.native
+            loan_details.collateral_asset_amount.native, ap.UInt64(1)
         ), "Insufficient txn asset_amount! Amount must be equal to collateral_asset_amount plus fees"
 
         assert (
@@ -126,32 +70,23 @@ class ZaibatsuService(ap.ARC4Contract):
         return loan_details
 
     @ap.arc4.abimethod()
-    def complete_p2p_loan_purchase(
+    def complete_non_p2p_loan_purchase(
         self,
         loan_key: ap.Bytes,
         completion_args: CompleteLoanArgs,
         principal_asset: ap.Asset,
         borrower: ap.Account,
-        txn: gtxn.AssetTransferTransaction,
     ) -> LoanDetails:
-        assert (
-            txn.asset_receiver == Global.current_application_address
-        ), "The recipient must be the ZaibatsuService address"
-
         [loan_bytes, exists] = op.Box.get(loan_key)
         assert exists, "A reccord with the loan_key passed was not found"
         details = LoanDetails.from_bytes(loan_bytes)
         assert details.collateral_paid, "The loan collateral must have been paid by this point"
         assert not details.principal_paid, "The principal must not have been paid"
-        assert (
-            txn.xfer_asset.id == details.principal_asset_id.native
-        ), "The asset transfered must be the same as the principal"
         assert borrower == details.borrower.native, "The borrower must be the borrower in the loan details"
         assert (
             principal_asset.id == details.principal_asset_id.native
         ), "The asset passed must be the same as the principal"
 
-        self.ensure_transaction_fee_on_amount(txn, details.principal_asset_amount.native)
         completion_txn = ap.itxn.AssetTransfer(
             fee=1000,
             xfer_asset=details.principal_asset_id.native,
@@ -179,53 +114,176 @@ class ZaibatsuService(ap.ARC4Contract):
         op.Box.put(loan_key, details.bytes)
         return details
 
-    @ap.subroutine
-    def create_loan_nft(
-        self, image_url: a4.String, short_name: ap.Bytes, logn_name: ap.Bytes, loan_hash: a4.String
-    ) -> ap.Asset:
-        txn = ap.itxn.AssetConfig(
-            total=1,
-            url=image_url.native,
-            unit_name=short_name,
-            asset_name=logn_name,
+    @ap.arc4.abimethod()
+    def complete_p2p_loan_purchase(
+        self,
+        loan_key: ap.Bytes,
+        completion_args: CompleteLoanArgs,
+        principal_asset: ap.Asset,
+        borrower: ap.Account,
+        txn: gtxn.AssetTransferTransaction,
+    ) -> LoanDetails:
+        self.ensure_app_reciever(txn)
+
+        [loan_bytes, exists] = op.Box.get(loan_key)
+        assert exists, "A reccord with the loan_key passed was not found"
+        details = LoanDetails.from_bytes(loan_bytes)
+        assert details.collateral_paid, "The loan collateral must have been paid by this point"
+        assert not details.principal_paid, "The principal must not have been paid"
+        assert (
+            txn.xfer_asset.id == details.principal_asset_id.native
+        ), "The asset transfered must be the same as the principal"
+        assert borrower == details.borrower.native, "The borrower must be the borrower in the loan details"
+        assert (
+            principal_asset.id == details.principal_asset_id.native
+        ), "The asset passed must be the same as the principal"
+
+        self.ensure_transaction_fee_on_amount(txn, details.principal_asset_amount.native, ap.UInt64(1))
+        completion_txn = ap.itxn.AssetTransfer(
             fee=1000,
-            metadata_hash=loan_hash.native.bytes,
-            manager=op.Global.current_application_address,
-            reserve=op.Global.current_application_address,
-            freeze=op.Global.current_application_address,
-            clawback=op.Global.current_application_address,
+            xfer_asset=details.principal_asset_id.native,
+            asset_receiver=details.borrower.native,
+            asset_amount=details.principal_asset_amount.native,
         )
-        txn.submit()
-        return op.ITxn.created_asset_id()
+        completion_txn.submit()
 
-    @ap.subroutine
-    def ensure_transaction_fee_on_amount(self, txn: gtxn.AssetTransferTransaction, amount: ap.UInt64) -> bool:
-        assert txn.asset_amount >= self.calculate_amt_plus_fee(
-            amount
-        ), "Insufficient txn asset_amount! Amount must be equal to principal_asset_amount plus fees"
-        return True
+        details.principal_paid = a4.Bool(True)  # noqa: FBT003
+        details.completed_payment_rounds = a4.UInt8(0)
+        borrower_nft = self.create_loan_nft(
+            completion_args.borrower_nft_image_url,
+            op.concat(ap.Bytes(b"B"), completion_args.loan_unit_name.bytes),
+            op.concat(ap.Bytes(b"#B-"), completion_args.loan_unit_name.bytes),
+            completion_args.loan_hash,
+        )
+        lender_nft = self.create_loan_nft(
+            completion_args.lender_nft_image_url,
+            op.concat(ap.Bytes(b"L"), completion_args.loan_unit_name.bytes),
+            op.concat(ap.Bytes(b"#L-"), completion_args.loan_unit_name.bytes),
+            completion_args.loan_hash,
+        )
+        details.borrower_nft_asser_id = A4UInt64(borrower_nft.id)
+        details.lender_nft_asser_id = A4UInt64(lender_nft.id)
+        op.Box.put(loan_key, details.bytes)
+        return details
 
-    @ap.subroutine
-    def calculate_amt_plus_fee(self, amt: ap.UInt64) -> ap.UInt64:
-        fee_percentage = ap.UInt64(5)
-        amt_adjusted_for_decimal = amt * ap.UInt64(10)
-        approx_fee_plus_amt = self.percentage_increase(A4UInt64(amt_adjusted_for_decimal), A4UInt64(fee_percentage))
-        corrected_approx_fee_plus_amt = approx_fee_plus_amt.native // ap.UInt64(10)
-        return corrected_approx_fee_plus_amt
+    @ap.arc4.abimethod()
+    def initiate_loan_repayment(
+        self,
+        loan_key: ap.Bytes,
+        repayment_key: ap.String,
+        txn: gtxn.AssetTransferTransaction,
+    ) -> PendingLoanRepayment:
+        self.ensure_app_reciever(txn)
 
-    @ap.subroutine
-    def get_asset_price(self, folks_feed_oracle: ap.Application, asa: ap.Asset) -> ap.UInt64:
-        [value, exists] = op.AppGlobal.get_ex_bytes(folks_feed_oracle, op.itob(asa.id))
-        assert exists, "This aset is not supported"
-        return op.extract_uint64(value, ap.UInt64(0))
+        repayment_box = op.Box.get(repayment_key.bytes)
+        assert not repayment_box[1], "A PendingLoanRepayment with this repayment_key already exists"
 
-    @ap.subroutine
-    def percentage(self, amount: A4UInt64, percent: A4UInt64) -> A4UInt64:
-        result = (percent.native * amount.native) // ap.UInt64(100)
-        return A4UInt64(result)
+        [loan_bytes, exists] = op.Box.get(loan_key)
+        assert exists, "A reccord with the loan_key passed was not found"
 
-    @ap.subroutine
-    def percentage_increase(self, amount: A4UInt64, increase: A4UInt64) -> A4UInt64:
-        percentage = self.percentage(amount, increase)
-        results = percentage.native + amount.native
-        return A4UInt64(results)
+        details = LoanDetails.from_bytes(loan_bytes)
+        principal_plus_interest = details.principal_asset_amount.native + details.interest_asset_amount.native
+        payment_amount = principal_plus_interest // details.payment_rounds.native
+        self.ensure_transaction_fee_on_amount(txn, payment_amount, details.payment_recipients.length)
+
+        pending_loan_repayment = PendingLoanRepayment(
+            key=a4.String(repayment_key),
+            loan_key=a4.String.from_bytes(loan_key),
+            repayment_amount=A4UInt64(payment_amount),
+            percentage_paid=A4UInt64(0),
+        )
+        op.Box.put(repayment_key.bytes, pending_loan_repayment.bytes)
+        return pending_loan_repayment
+
+    @ap.arc4.abimethod()
+    def execute_loan_repayment(
+        self,
+        loan_key: ap.String,
+        repayment_key: ap.String,
+        recipient_account: ap.Account,
+        payment_recipient: PaymentReciepient,
+    ) -> ExecuteLoanRepaymentResponse:
+        [repayment_bytes, exists] = op.Box.get(repayment_key.bytes)
+        assert exists, "A PendingLoanRepayment with this repayment_key was not found"
+        repayment = PendingLoanRepayment.from_bytes(repayment_bytes)
+
+        assert loan_key == repayment.loan_key.native, "Invalid loan key"
+
+        [loan_bytes, loan_exists] = op.Box.get(loan_key.bytes)
+        assert loan_exists, "A loan with this key was not found"
+        loan = LoanDetails.from_bytes(loan_bytes)
+        assert (
+            payment_recipient.recipient_address.native == recipient_account
+        ), "The recipient_account does not match the payment_recipient"
+
+        recipient_is_valid = a4.Bool()
+
+        for index in ap.urange(loan.payment_recipients.length):
+            recipient = loan.payment_recipients[index].copy()
+            if recipient.recipient_address == payment_recipient.recipient_address:
+                assert (
+                    recipient.payment_percentage.native == payment_recipient.payment_percentage.native
+                ), "payment_recipient.payment_percentage is incorrect"
+                recipient_is_valid = a4.Bool(True)  # noqa: FBT003
+                break
+
+        assert recipient_is_valid, "payment_recipient passed is not a valid payment_recipient of the specified loan"
+
+        new_percentage_paid = payment_recipient.payment_percentage.native + repayment.percentage_paid.native
+
+        assert new_percentage_paid <= ap.UInt64(
+            10000
+        ), "PendingLoanRe.percentage_paid + PaymentReciepient.payment_percentage will exceed 100%"
+
+        repayment_txn = ap.itxn.AssetTransfer(
+            fee=1000,
+            xfer_asset=loan.principal_asset_id.native,
+            asset_receiver=recipient_account,
+            asset_amount=self.percentage(
+                repayment.repayment_amount,
+                payment_recipient.payment_percentage,
+            ).native,
+        )
+        repayment_txn.submit()
+        repayment.percentage_paid = A4UInt64(new_percentage_paid)
+
+        op.Box.put(repayment_key.bytes, repayment.bytes)
+        repayment_response = ExecuteLoanRepaymentResponse(
+            loan_repayment_complete=a4.Bool(new_percentage_paid == ap.UInt64(1000)),
+            percentage_paid=A4UInt64(new_percentage_paid),
+        )
+        return repayment_response
+
+    @ap.arc4.abimethod()
+    def clean_up_loan_repayment(
+        self,
+        loan_key: ap.String,
+        repayment_key: ap.String,
+        borrower_account: ap.Account,
+    ) -> CleanUpLoanRepaymentResponse:
+        op.Box.delete(repayment_key.bytes)
+
+        [loan_bytes, loan_exists] = op.Box.get(loan_key.bytes)
+        assert loan_exists, "A loan with this key was not found"
+        loan = LoanDetails.from_bytes(loan_bytes)
+
+        assert loan.borrower.native == borrower_account, "The borrower_account provided is incorrect"
+
+        clean_up_response = CleanUpLoanRepaymentResponse(loan_repayment_complete=a4.Bool())
+
+        if loan.payment_rounds.native == loan.completed_payment_rounds.native:
+            complete_loan_repaymet_txn = ap.itxn.AssetTransfer(
+                fee=100,
+                xfer_asset=loan.collateral_asset_id.native,
+                asset_receiver=borrower_account,
+                asset_amount=loan.collateral_asset_amount.native,
+                note="Collateral repayment on completed loan",
+            )
+            complete_loan_repaymet_txn.submit()
+            op.Box.delete(loan_key.bytes)
+            clean_up_response.loan_repayment_complete = a4.Bool(True)  # noqa: FBT003
+        else:
+            loan.completed_payment_rounds = a4.UInt8(loan.completed_payment_rounds.native + ap.UInt64(1))
+            op.Box.put(loan_key.bytes, loan.bytes)
+
+        return clean_up_response

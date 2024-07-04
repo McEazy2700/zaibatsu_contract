@@ -1,0 +1,7 @@
+#pragma version 10
+
+smart_contracts.zaibatsu_authorization_and_dao.contract.ZaibatsuAuthorizationAndDao.clear_state_program:
+    // smart_contracts/zaibatsu_authorization_and_dao/contract.py:10
+    // class ZaibatsuAuthorizationAndDao(ZaibatsuBase):
+    int 1
+    return

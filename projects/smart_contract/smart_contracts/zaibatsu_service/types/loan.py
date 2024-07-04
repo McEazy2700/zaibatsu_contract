@@ -24,6 +24,22 @@ class PaymentReciepient(Struct, kw_only=True):
 PaymentReciepientArray: TypeAlias = DynamicArray[PaymentReciepient]
 
 
+class PendingLoanRepayment(Struct, kw_only=True):
+    key: String
+    loan_key: String
+    repayment_amount: A4UInt64
+    percentage_paid: A4UInt64
+
+
+class ExecuteLoanRepaymentResponse(Struct, kw_only=True):
+    loan_repayment_complete: Bool
+    percentage_paid: A4UInt64
+
+
+class CleanUpLoanRepaymentResponse(Struct, kw_only=True):
+    loan_repayment_complete: Bool
+
+
 class LoanDetails(Struct, kw_only=True):
     loan_key: String
     loan_type: String  # "P2P" | "DAO" | "ZAIBATSU"
