@@ -14,8 +14,8 @@ from artifacts.zaibatsu_loan.client import ZaibatsuLoanClient
 from dotenv import load_dotenv
 from folksfeedsdk.folks_feed_client import FolksFeedClient
 
-from smart_contracts.artifacts.zaibatsu_authorization_and_dao.client import (
-    ZaibatsuAuthorizationAndDaoClient as ZaibatsuAuthClient,
+from smart_contracts.artifacts.zaibatsu_auth_and_dao.client import (
+    ZaibatsuAuthAndDaoClient,
 )
 from tests.utils import unwrap_env_var
 
@@ -50,18 +50,12 @@ def test_account() -> Account:
 
 
 @pytest.fixture(scope="session")
-def ffo_client(
-    algod_client: AlgodClient, indexer_client: IndexerClient
-) -> FolksFeedClient:
-    return FolksFeedClient(
-        algod_client=algod_client, indexer_client=indexer_client, app_id=159512493
-    )
+def ffo_client(algod_client: AlgodClient, indexer_client: IndexerClient) -> FolksFeedClient:
+    return FolksFeedClient(algod_client=algod_client, indexer_client=indexer_client, app_id=159512493)
 
 
 @pytest.fixture(scope="session")
-def zaibatsu_loan_client(
-    algod_client: AlgodClient, creator_account: Account
-) -> ZaibatsuLoanClient:
+def zaibatsu_loan_client(algod_client: AlgodClient, creator_account: Account) -> ZaibatsuLoanClient:
     config.configure(
         debug=True,
         # trace_all=True,
@@ -79,13 +73,13 @@ def zaibatsu_loan_client(
 def zaibatsu_auth_client(
     algod_client: AlgodClient,
     creator_account: Account,
-) -> ZaibatsuAuthClient:
+) -> ZaibatsuAuthAndDaoClient:
     config.configure(
         debug=True,
         # trace_all=True,
     )
 
-    client = ZaibatsuAuthClient(
+    client = ZaibatsuAuthAndDaoClient(
         algod_client,
         app_id=694505037,
         signer=creator_account.signer,

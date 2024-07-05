@@ -4,8 +4,8 @@ from algosdk.v2client.algod import AlgodClient
 from artifacts.zaibatsu_loan.client import ZaibatsuLoanClient
 from folksfeedsdk.constants import TestnetAssetId
 
-from smart_contracts.artifacts.zaibatsu_authorization_and_dao.client import (
-    ZaibatsuAuthorizationAndDaoClient as ZaibatsuAuthClient,
+from smart_contracts.artifacts.zaibatsu_auth_and_dao.client import (
+    ZaibatsuAuthAndDaoClient,
 )
 from tests.utils import calc_amount_plus_fee, get_multiplier_for_decimal_places
 
@@ -13,28 +13,26 @@ FOLKS_FEED_ORACLE_TESTNET_ID = 159512493
 
 
 # @pytest.mark.skip()
-def test_update(zaibatsu_auth_client: ZaibatsuAuthClient) -> None:
+def test_update(zaibatsu_auth_client: ZaibatsuAuthAndDaoClient) -> None:
     zaibatsu_auth_client.update_update()
 
 
-def test_opt_contract_into_asset(zaibatsu_auth_client: ZaibatsuAuthClient):
+def test_opt_contract_into_asset(zaibatsu_auth_client: ZaibatsuAuthAndDaoClient):
     result1 = zaibatsu_auth_client.opt_contract_into_asset(asset=TestnetAssetId.USDC)
     result2 = zaibatsu_auth_client.opt_contract_into_asset(asset=TestnetAssetId.USDt)
     assert result1.return_value and result2.return_value
 
 
 def test_set_service_contract_address(
-    zaibatsu_auth_client: ZaibatsuAuthClient,
+    zaibatsu_auth_client: ZaibatsuAuthAndDaoClient,
     zaibatsu_loan_client: ZaibatsuLoanClient,
 ):
-    zaibatsu_auth_client.set_service_contract_address(
-        address=zaibatsu_loan_client.app_address
-    )
+    zaibatsu_auth_client.set_service_contract_address(address=zaibatsu_loan_client.app_address)
 
 
 # @pytest.mark.skip()
 def test_authorize_pool_creation(
-    zaibatsu_auth_client: ZaibatsuAuthClient,
+    zaibatsu_auth_client: ZaibatsuAuthAndDaoClient,
     zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
@@ -53,9 +51,7 @@ def test_authorize_pool_creation(
         receiver=zaibatsu_loan_client.app_address,
         index=TestnetAssetId.USDC,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(
-        txn=txn, signer=creator_account.signer
-    )
+    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
     result = zaibatsu_auth_client.authorize_pool_creation(
         txn=txn,
         folks_feed_oracle=FOLKS_FEED_ORACLE_TESTNET_ID,
@@ -66,7 +62,7 @@ def test_authorize_pool_creation(
 
 # @pytest.mark.skip()
 def test_fund_pool(
-    zaibatsu_auth_client: ZaibatsuAuthClient,
+    zaibatsu_auth_client: ZaibatsuAuthAndDaoClient,
     zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
@@ -79,7 +75,5 @@ def test_fund_pool(
         receiver=zaibatsu_loan_client.app_address,
         index=TestnetAssetId.USDC,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(
-        txn=txn, signer=creator_account.signer
-    )
+    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
     zaibatsu_auth_client.fund_pool(txn=txn)
