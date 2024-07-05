@@ -4,7 +4,7 @@ from algopy import arc4 as a4
 from algopy import gtxn, op
 
 from smart_contracts.zaibatsu_base.contract import ZaibatsuBase
-from smart_contracts.zaibatsu_service.types.loan import (
+from smart_contracts.zaibatsu_loan.types.loan import (
     CleanUpLoanRepaymentResponse,
     CompleteLoanArgs,
     ExecuteLoanRepaymentResponse,
@@ -14,7 +14,7 @@ from smart_contracts.zaibatsu_service.types.loan import (
 )
 
 
-class ZaibatsuService(ZaibatsuBase):
+class ZaibatsuLoan(ZaibatsuBase):
     """
     ATTENTIONS!!!! THIS IS NOT A DRILL
     * All percentages comming into the smart contract must have been multiple

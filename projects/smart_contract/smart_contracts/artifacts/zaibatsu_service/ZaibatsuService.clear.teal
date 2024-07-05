@@ -1,7 +1,0 @@
-#pragma version 10
-
-smart_contracts.zaibatsu_service.contract.ZaibatsuService.clear_state_program:
-    // smart_contracts/zaibatsu_service/contract.py:17
-    // class ZaibatsuService(ZaibatsuBase):
-    int 1
-    return

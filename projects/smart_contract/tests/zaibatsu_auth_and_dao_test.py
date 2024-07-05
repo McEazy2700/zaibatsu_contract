@@ -1,7 +1,7 @@
 from algokit_utils import Account
 from algosdk import atomic_transaction_composer, transaction
 from algosdk.v2client.algod import AlgodClient
-from artifacts.zaibatsu_service.client import ZaibatsuServiceClient
+from artifacts.zaibatsu_loan.client import ZaibatsuLoanClient
 from folksfeedsdk.constants import TestnetAssetId
 
 from smart_contracts.artifacts.zaibatsu_authorization_and_dao.client import (
@@ -25,17 +25,17 @@ def test_opt_contract_into_asset(zaibatsu_auth_client: ZaibatsuAuthClient):
 
 def test_set_service_contract_address(
     zaibatsu_auth_client: ZaibatsuAuthClient,
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
 ):
     zaibatsu_auth_client.set_service_contract_address(
-        address=zaibatsu_service_client.app_address
+        address=zaibatsu_loan_client.app_address
     )
 
 
 # @pytest.mark.skip()
 def test_authorize_pool_creation(
     zaibatsu_auth_client: ZaibatsuAuthClient,
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
     # ffo_client: FolksFeedClient,
@@ -50,7 +50,7 @@ def test_authorize_pool_creation(
         sp=sp,
         amt=amt_plus_fee,
         sender=creator_account.address,
-        receiver=zaibatsu_service_client.app_address,
+        receiver=zaibatsu_loan_client.app_address,
         index=TestnetAssetId.USDC,
     )
     txn = atomic_transaction_composer.TransactionWithSigner(
@@ -67,7 +67,7 @@ def test_authorize_pool_creation(
 # @pytest.mark.skip()
 def test_fund_pool(
     zaibatsu_auth_client: ZaibatsuAuthClient,
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
 ):
@@ -76,7 +76,7 @@ def test_fund_pool(
         sp=sp,
         amt=2000,
         sender=creator_account.address,
-        receiver=zaibatsu_service_client.app_address,
+        receiver=zaibatsu_loan_client.app_address,
         index=TestnetAssetId.USDC,
     )
     txn = atomic_transaction_composer.TransactionWithSigner(

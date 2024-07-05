@@ -10,11 +10,11 @@ from algosdk.v2client.algod import AlgodClient
 from folksfeedsdk.constants import TestnetAssetId
 
 # from folksfeedsdk.folks_feed_client import FolksFeedClient
-from smart_contracts.artifacts.zaibatsu_service.client import (
+from smart_contracts.artifacts.zaibatsu_loan.client import (
     CompleteLoanArgs,
     LoanDetails,
     PaymentReciepient,
-    ZaibatsuServiceClient,
+    ZaibatsuLoanClient,
 )
 
 from .utils import (
@@ -68,19 +68,19 @@ def pool_loan_details(
 
 
 # @pytest.mark.skip()
-def test_update(zaibatsu_service_client: ZaibatsuServiceClient) -> None:
-    zaibatsu_service_client.update_update()
+def test_update(zaibatsu_loan_client: ZaibatsuLoanClient) -> None:
+    zaibatsu_loan_client.update_update()
 
 
 # @pytest.mark.skip()
-def test_opt_contract_into_asset(zaibatsu_service_client: ZaibatsuServiceClient):
-    result1 = zaibatsu_service_client.opt_contract_into_asset(asset=TestnetAssetId.USDC)
-    result2 = zaibatsu_service_client.opt_contract_into_asset(asset=TestnetAssetId.USDt)
+def test_opt_contract_into_asset(zaibatsu_loan_client: ZaibatsuLoanClient):
+    result1 = zaibatsu_loan_client.opt_contract_into_asset(asset=TestnetAssetId.USDC)
+    result2 = zaibatsu_loan_client.opt_contract_into_asset(asset=TestnetAssetId.USDt)
     assert result1.return_value and result2.return_value
 
 
 def initiate_loan_purchase(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
     loan_details: LoanDetails,
@@ -96,31 +96,33 @@ def initiate_loan_purchase(
         sender=creator_account.address,
         sp=sp,
         index=TestnetAssetId.USDt,
-        receiver=zaibatsu_service_client.app_address,
+        receiver=zaibatsu_loan_client.app_address,
         amt=txn_amt,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
-    zaibatsu_service_client.initiate_loan_purchase(
+    txn = atomic_transaction_composer.TransactionWithSigner(
+        txn=txn, signer=creator_account.signer
+    )
+    zaibatsu_loan_client.initiate_loan_purchase(
         loan_key=loan_details.loan_key.encode(),
         folks_feed_oracle=FOLKS_FEED_ORACLE_TESTNET_ID,
         loan_details=loan_details,
         txn=txn,
         transaction_parameters=TransactionParameters(
-            boxes=[(zaibatsu_service_client.app_id, loan_details.loan_key.encode())]
+            boxes=[(zaibatsu_loan_client.app_id, loan_details.loan_key.encode())]
         ),
     )
 
 
 # @pytest.mark.skip()
 def test_initiate_p2p_loan_purchase(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
     test_account: Account,
     loan_details: LoanDetails,
 ) -> None:
     initiate_loan_purchase(
-        zaibatsu_service_client=zaibatsu_service_client,
+        zaibatsu_loan_client=zaibatsu_loan_client,
         algod_client=algod_client,
         creator_account=creator_account,
         loan_details=loan_details,
@@ -131,14 +133,14 @@ def test_initiate_p2p_loan_purchase(
 
 # @pytest.mark.skip()
 def test_initiate_non_p2p_loan_purchase(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
     creator_account: Account,
     test_account: Account,
     pool_loan_details: LoanDetails,
 ) -> None:
     initiate_loan_purchase(
-        zaibatsu_service_client=zaibatsu_service_client,
+        zaibatsu_loan_client=zaibatsu_loan_client,
         algod_client=algod_client,
         creator_account=creator_account,
         loan_details=pool_loan_details,
@@ -153,7 +155,7 @@ def test_initiate_non_p2p_loan_purchase(
 # @pytest.mark.skip()
 def test_complete_p2p_loan_purchase(
     algod_client: AlgodClient,
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     test_account: Account,
     creator_account: Account,
     loan_details: LoanDetails,
@@ -166,10 +168,12 @@ def test_complete_p2p_loan_purchase(
         sender=test_account.address,
         sp=sp,
         index=TestnetAssetId.USDC,
-        receiver=zaibatsu_service_client.app_address,
+        receiver=zaibatsu_loan_client.app_address,
         amt=txn_amt,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=test_account.signer)
+    txn = atomic_transaction_composer.TransactionWithSigner(
+        txn=txn, signer=test_account.signer
+    )
 
     loan_unit_id = random.randint(1, 1000000)
     encoded_loan_unit_id = encode_id_to_base64(loan_unit_id)
@@ -180,21 +184,21 @@ def test_complete_p2p_loan_purchase(
         borrower_nft_image_url="",
         loan_hash=secrets.token_hex(16),
     )
-    zaibatsu_service_client.complete_p2p_loan_purchase(
+    zaibatsu_loan_client.complete_p2p_loan_purchase(
         loan_key=loan_details.loan_key.encode(),
         completion_args=complete_args,
         txn=txn,
         principal_asset=TestnetAssetId.USDC,
         borrower=creator_account.address,
         transaction_parameters=TransactionParameters(
-            boxes=[(zaibatsu_service_client.app_id, loan_details.loan_key.encode())]
+            boxes=[(zaibatsu_loan_client.app_id, loan_details.loan_key.encode())]
         ),
     )
 
 
 # @pytest.mark.skip()
 def test_complete_non_p2p_loan_purchase(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     creator_account: Account,
     pool_loan_details: LoanDetails,
 ) -> None:
@@ -207,13 +211,13 @@ def test_complete_non_p2p_loan_purchase(
         borrower_nft_image_url="",
         loan_hash=secrets.token_hex(16),
     )
-    zaibatsu_service_client.complete_non_p2p_loan_purchase(
+    zaibatsu_loan_client.complete_non_p2p_loan_purchase(
         loan_key=pool_loan_details.loan_key.encode(),
         completion_args=complete_args,
         principal_asset=TestnetAssetId.USDC,
         borrower=creator_account.address,
         transaction_parameters=TransactionParameters(
-            boxes=[(zaibatsu_service_client.app_id, pool_loan_details.loan_key.encode())]
+            boxes=[(zaibatsu_loan_client.app_id, pool_loan_details.loan_key.encode())]
         ),
     )
 
@@ -226,7 +230,7 @@ def repayment_key() -> str:
 
 # @pytest.mark.skip()
 def test_initiate_p2p_loan_repayment(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     creator_account: Account,
     algod_client: AlgodClient,
     loan_details: LoanDetails,
@@ -242,57 +246,61 @@ def test_initiate_p2p_loan_repayment(
         sender=creator_account.address,
         sp=sp,
         index=loan_details.principal_asset_id,
-        receiver=zaibatsu_service_client.app_address,
+        receiver=zaibatsu_loan_client.app_address,
         amt=amount_plus_fee,
     )
-    txn = atomic_transaction_composer.TransactionWithSigner(txn=txn, signer=creator_account.signer)
-    zaibatsu_service_client.initiate_loan_repayment(
+    txn = atomic_transaction_composer.TransactionWithSigner(
+        txn=txn, signer=creator_account.signer
+    )
+    zaibatsu_loan_client.initiate_loan_repayment(
         loan_key=loan_details.loan_key.encode(),
         repayment_key=repayment_key,
         txn=txn,
         transaction_parameters=TransactionParameters(
             boxes=[
-                (zaibatsu_service_client.app_id, loan_details.loan_key.encode()),
-                (zaibatsu_service_client.app_id, repayment_key.encode()),
+                (zaibatsu_loan_client.app_id, loan_details.loan_key.encode()),
+                (zaibatsu_loan_client.app_id, repayment_key.encode()),
             ]
         ),
     )
 
 
 def test_execute_loan_repayment(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     test_account: Account,
     loan_details: LoanDetails,
     repayment_key: str,
 ) -> None:
-    payment_recipient = PaymentReciepient(payment_percentage=100 * 100, recipient_address=test_account.address)
+    payment_recipient = PaymentReciepient(
+        payment_percentage=100 * 100, recipient_address=test_account.address
+    )
 
-    zaibatsu_service_client.execute_loan_repayment(
+    zaibatsu_loan_client.execute_loan_repayment(
         repayment_key=repayment_key,
         recipient_account=test_account.address,
         payment_recipient=payment_recipient,
         principal_asset=loan_details.principal_asset_id,
         transaction_parameters=TransactionParameters(
             boxes=[
-                (zaibatsu_service_client.app_id, loan_details.loan_key.encode()),
-                (zaibatsu_service_client.app_id, repayment_key.encode()),
+                (zaibatsu_loan_client.app_id, loan_details.loan_key.encode()),
+                (zaibatsu_loan_client.app_id, repayment_key.encode()),
             ]
         ),
     )
 
 
 def test_clean_up_loan_repayment(
-    zaibatsu_service_client: ZaibatsuServiceClient,
+    zaibatsu_loan_client: ZaibatsuLoanClient,
     loan_details: LoanDetails,
     repayment_key: str,
 ) -> None:
-    result = zaibatsu_service_client.clean_up_loan_repayment(
+    result = zaibatsu_loan_client.clean_up_loan_repayment(
         repayment_key=repayment_key,
         borrower_account=loan_details.borrower,
         transaction_parameters=TransactionParameters(
             boxes=[
-                (zaibatsu_service_client.app_id, loan_details.loan_key.encode()),
-                (zaibatsu_service_client.app_id, repayment_key.encode()),
+                (zaibatsu_loan_client.app_id, loan_details.loan_key.encode()),
+                (zaibatsu_loan_client.app_id, repayment_key.encode()),
             ]
         ),
     )

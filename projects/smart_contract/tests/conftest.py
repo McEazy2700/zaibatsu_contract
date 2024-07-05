@@ -10,7 +10,7 @@ from algokit_utils.config import config
 from algosdk import mnemonic
 from algosdk.v2client.algod import AlgodClient
 from algosdk.v2client.indexer import IndexerClient
-from artifacts.zaibatsu_service.client import ZaibatsuServiceClient
+from artifacts.zaibatsu_loan.client import ZaibatsuLoanClient
 from dotenv import load_dotenv
 from folksfeedsdk.folks_feed_client import FolksFeedClient
 
@@ -59,15 +59,15 @@ def ffo_client(
 
 
 @pytest.fixture(scope="session")
-def zaibatsu_service_client(
+def zaibatsu_loan_client(
     algod_client: AlgodClient, creator_account: Account
-) -> ZaibatsuServiceClient:
+) -> ZaibatsuLoanClient:
     config.configure(
         debug=True,
         # trace_all=True,
     )
 
-    client = ZaibatsuServiceClient(
+    client = ZaibatsuLoanClient(
         algod_client,
         app_id=672950882,
         signer=creator_account.signer,

@@ -1,0 +1,7 @@
+#pragma version 10
+
+smart_contracts.zaibatsu_loan.contract.ZaibatsuLoan.clear_state_program:
+    // smart_contracts/zaibatsu_loan/contract.py:17
+    // class ZaibatsuLoan(ZaibatsuBase):
+    int 1
+    return
