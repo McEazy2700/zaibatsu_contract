@@ -99,13 +99,14 @@ class ZaibatsuBase(ap.ARC4Contract):
     @ap.subroutine
     def calculate_amt_plus_fee(self, amt: ap.UInt64, multiples: ap.UInt64) -> ap.UInt64:
         fee_percentage = ap.UInt64(5) * multiples
-        amt_adjusted_for_decimal = amt * ap.UInt64(10)
-        approx_fee_plus_amt = self.percentage_increase(a4.UInt64(amt_adjusted_for_decimal), a4.UInt64(fee_percentage))
-        corrected_approx_fee_plus_amt = approx_fee_plus_amt.native // ap.UInt64(10)
-        return corrected_approx_fee_plus_amt
+        multiplied = fee_percentage * amt
+        half_percent = multiplied // 1000
+        return half_percent
 
     @ap.subroutine
-    def get_asset_price(self, folks_feed_oracle: ap.Application, asa: ap.Asset) -> ap.UInt64:
+    def get_asset_price(
+        self, folks_feed_oracle: ap.Application, asa: ap.Asset
+    ) -> ap.UInt64:
         [value, exists] = op.AppGlobal.get_ex_bytes(folks_feed_oracle, op.itob(asa.id))
         assert exists, "This aset is not supported"
         return op.extract_uint64(value, ap.UInt64(0))
@@ -129,4 +130,6 @@ class ZaibatsuBase(ap.ARC4Contract):
 
     @ap.subroutine
     def ensure_service_reciever(self, txn: gtxn.AssetTransferTransaction) -> None:
-        assert txn.asset_receiver == self.service_contract.native, "The recipient must be the ZaibatsuService address"
+        assert (
+            txn.asset_receiver == self.service_contract.native
+        ), "The recipient must be the ZaibatsuService address"

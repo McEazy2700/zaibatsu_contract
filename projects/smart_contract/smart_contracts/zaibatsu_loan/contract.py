@@ -44,11 +44,15 @@ class ZaibatsuLoan(ZaibatsuBase):
         ), "The loan must be either P2P, DAO or ZAIBATSU"
 
         if loan_details.loan_type == a4.String("P2P"):
-            assert loan_details.payment_recipients.length == ap.UInt64(1), "Only one recipient is allowed in a P2P loan"
+            assert loan_details.payment_recipients.length == ap.UInt64(
+                1
+            ), "Only one recipient is allowed in a P2P loan"
 
         assert not loan_details.collateral_paid, "The loan collateral must not be paid"
         assert not loan_details.principal_paid, "The loan principal must not be paid"
-        assert loan_details.borrower == txn.sender, "The sender must also be the borrower"
+        assert (
+            loan_details.borrower == txn.sender
+        ), "The sender must also be the borrower"
 
         assert (
             loan_details.collateral_asset_id == txn.xfer_asset.id
@@ -59,7 +63,8 @@ class ZaibatsuLoan(ZaibatsuBase):
         ), "Insufficient txn asset_amount! Amount must be equal to collateral_asset_amount plus fees"
 
         assert (
-            loan_details.payment_completion_timestamp.native > op.Global.latest_timestamp
+            loan_details.payment_completion_timestamp.native
+            > op.Global.latest_timestamp
         ), "The payment completion timestamp must be greater than now"
 
         loan_details.collateral_paid = a4.Bool(True)  # noqa: FBT003
@@ -79,9 +84,13 @@ class ZaibatsuLoan(ZaibatsuBase):
         [loan_bytes, exists] = op.Box.get(loan_key)
         assert exists, "A reccord with the loan_key passed was not found"
         details = LoanDetails.from_bytes(loan_bytes)
-        assert details.collateral_paid, "The loan collateral must have been paid by this point"
+        assert (
+            details.collateral_paid
+        ), "The loan collateral must have been paid by this point"
         assert not details.principal_paid, "The principal must not have been paid"
-        assert borrower == details.borrower.native, "The borrower must be the borrower in the loan details"
+        assert (
+            borrower == details.borrower.native
+        ), "The borrower must be the borrower in the loan details"
         assert (
             principal_asset.id == details.principal_asset_id.native
         ), "The asset passed must be the same as the principal"
@@ -127,17 +136,20 @@ class ZaibatsuLoan(ZaibatsuBase):
         [loan_bytes, exists] = op.Box.get(loan_key)
         assert exists, "A reccord with the loan_key passed was not found"
         details = LoanDetails.from_bytes(loan_bytes)
-        assert details.collateral_paid, "The loan collateral must have been paid by this point"
+        assert (
+            details.collateral_paid
+        ), "The loan collateral must have been paid by this point"
         assert not details.principal_paid, "The principal must not have been paid"
         assert (
             txn.xfer_asset.id == details.principal_asset_id.native
         ), "The asset transfered must be the same as the principal"
-        assert borrower == details.borrower.native, "The borrower must be the borrower in the loan details"
+        assert (
+            borrower == details.borrower.native
+        ), "The borrower must be the borrower in the loan details"
         assert (
             principal_asset.id == details.principal_asset_id.native
         ), "The asset passed must be the same as the principal"
 
-        self.ensure_transaction_fee_on_amount(txn, details.principal_asset_amount.native, ap.UInt64(1))
         completion_txn = ap.itxn.AssetTransfer(
             fee=1000,
             xfer_asset=details.principal_asset_id.native,
@@ -178,9 +190,10 @@ class ZaibatsuLoan(ZaibatsuBase):
         assert exists, "A reccord with the loan_key passed was not found"
 
         details = LoanDetails.from_bytes(loan_bytes)
-        principal_plus_interest = details.principal_asset_amount.native + details.interest_asset_amount.native
+        principal_plus_interest = (
+            details.principal_asset_amount.native + details.interest_asset_amount.native
+        )
         payment_amount = principal_plus_interest // details.payment_rounds.native
-        self.ensure_transaction_fee_on_amount(txn, payment_amount, details.payment_recipients.length)
 
         round_payment = PendingLoanRoundPayment(
             repayment_key=a4.String(repayment_key),
@@ -210,7 +223,9 @@ class ZaibatsuLoan(ZaibatsuBase):
             payment_recipient.recipient_address.native == recipient_account
         ), "The recipient_account does not match the payment_recipient"
 
-        assert principal_asset.id == loan.principal_asset_id.native, "The principal_asset passed is invalid"
+        assert (
+            principal_asset.id == loan.principal_asset_id.native
+        ), "The principal_asset passed is invalid"
 
         recipient_is_valid = a4.Bool()
 
@@ -218,14 +233,20 @@ class ZaibatsuLoan(ZaibatsuBase):
             recipient = repayment.recipients[index].copy()
             if recipient.recipient_address == payment_recipient.recipient_address:
                 assert (
-                    recipient.payment_percentage.native == payment_recipient.payment_percentage.native
+                    recipient.payment_percentage.native
+                    == payment_recipient.payment_percentage.native
                 ), "payment_recipient.payment_percentage is incorrect"
                 recipient_is_valid = a4.Bool(True)  # noqa: FBT003
                 break
 
-        assert recipient_is_valid, "payment_recipient passed is not a valid payment_recipient of the specified loan"
+        assert (
+            recipient_is_valid
+        ), "payment_recipient passed is not a valid payment_recipient of the specified loan"
 
-        new_percentage_paid = payment_recipient.payment_percentage.native + repayment.percentage_paid.native
+        new_percentage_paid = (
+            payment_recipient.payment_percentage.native
+            + repayment.percentage_paid.native
+        )
 
         assert new_percentage_paid <= ap.UInt64(
             10000
@@ -264,11 +285,17 @@ class ZaibatsuLoan(ZaibatsuBase):
         assert loan_exists, "A loan with this key was not found"
         loan = LoanDetails.from_bytes(loan_bytes)
 
-        assert loan.borrower.native == borrower_account, "The borrower_account provided is incorrect"
+        assert (
+            loan.borrower.native == borrower_account
+        ), "The borrower_account provided is incorrect"
 
-        clean_up_response = CleanUpLoanRepaymentResponse(loan_repayment_complete=a4.Bool())
+        clean_up_response = CleanUpLoanRepaymentResponse(
+            loan_repayment_complete=a4.Bool()
+        )
 
-        loan.completed_payment_rounds = a4.UInt8(loan.completed_payment_rounds.native + ap.UInt64(1))
+        loan.completed_payment_rounds = a4.UInt8(
+            loan.completed_payment_rounds.native + ap.UInt64(1)
+        )
         if loan.payment_rounds.native == loan.completed_payment_rounds.native:
             complete_loan_repaymet_txn = ap.itxn.AssetTransfer(
                 fee=100,

@@ -6,32 +6,34 @@ smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.approval_progr
     callsub __init__
 
 main_entrypoint@2:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:10
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
     // class ZaibatsuAuthAndDao(ZaibatsuBase):
     method "hello(string)string"
     method "create()bool"
     method "update()bool"
     method "delete()bool"
     method "set_service_contract_address(address)bool"
-    method "authorize_pool_creation(axfer,application,uint64)(uint64,bool)"
-    method "fund_pool(axfer)(uint64,bool)"
+    method "authorize_pool_creation(axfer,application,string,string,string,string,uint64,uint64)(string,uint64,uint64)"
+    method "optin_pool_asset(axfer,string)void"
+    method "fund_pool(string,uint64,account,application,axfer,asset,uint64)(uint64,bool)"
+    method "approve_pool_vote(string,axfer)(uint64,string)"
     method "opt_contract_into_asset(asset)bool"
     txna ApplicationArgs 0
-    match main_hello_route@3 main_create_route@4 main_update_route@5 main_delete_route@6 main_set_service_contract_address_route@7 main_authorize_pool_creation_route@8 main_fund_pool_route@9 main_opt_contract_into_asset_route@10
+    match main_hello_route@3 main_create_route@4 main_update_route@5 main_delete_route@6 main_set_service_contract_address_route@7 main_authorize_pool_creation_route@8 main_optin_pool_asset_route@9 main_fund_pool_route@10 main_approve_pool_vote_route@11 main_opt_contract_into_asset_route@12
     err // reject transaction
 
 main_hello_route@3:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:11
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:15
     // @a4.abimethod()
     txn OnCompletion
     !
     assert // OnCompletion is NoOp
     txn ApplicationID
     assert // is not creating
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:10
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
     // class ZaibatsuAuthAndDao(ZaibatsuBase):
     txna ApplicationArgs 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:11
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:15
     // @a4.abimethod()
     callsub hello
     byte 0x151f7c75
@@ -42,7 +44,7 @@ main_hello_route@3:
     return
 
 main_create_route@4:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:15
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:19
     // @a4.abimethod(create="allow")
     txn OnCompletion
     !
@@ -60,7 +62,7 @@ main_create_route@4:
     return
 
 main_update_route@5:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:20
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:24
     // @a4.abimethod(allow_actions=["UpdateApplication"])
     txn OnCompletion
     int UpdateApplication
@@ -81,7 +83,7 @@ main_update_route@5:
     return
 
 main_delete_route@6:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:29
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:33
     // @a4.abimethod(allow_actions=["DeleteApplication"])
     txn OnCompletion
     int DeleteApplication
@@ -102,17 +104,17 @@ main_delete_route@6:
     return
 
 main_set_service_contract_address_route@7:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:35
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:39
     // @a4.abimethod()
     txn OnCompletion
     !
     assert // OnCompletion is NoOp
     txn ApplicationID
     assert // is not creating
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:10
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
     // class ZaibatsuAuthAndDao(ZaibatsuBase):
     txna ApplicationArgs 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:35
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:39
     // @a4.abimethod()
     callsub set_service_contract_address
     byte 0x00
@@ -127,14 +129,14 @@ main_set_service_contract_address_route@7:
     return
 
 main_authorize_pool_creation_route@8:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:41
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:45
     // @a4.abimethod()
     txn OnCompletion
     !
     assert // OnCompletion is NoOp
     txn ApplicationID
     assert // is not creating
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:10
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
     // class ZaibatsuAuthAndDao(ZaibatsuBase):
     txn GroupIndex
     int 1
@@ -148,8 +150,18 @@ main_authorize_pool_creation_route@8:
     btoi
     txnas Applications
     txna ApplicationArgs 2
+    extract 2 0
+    txna ApplicationArgs 3
+    extract 2 0
+    txna ApplicationArgs 4
+    extract 2 0
+    txna ApplicationArgs 5
+    extract 2 0
+    txna ApplicationArgs 6
     btoi
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:41
+    txna ApplicationArgs 7
+    btoi
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:45
     // @a4.abimethod()
     callsub authorize_pool_creation
     byte 0x151f7c75
@@ -159,15 +171,15 @@ main_authorize_pool_creation_route@8:
     int 1
     return
 
-main_fund_pool_route@9:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:64
+main_optin_pool_asset_route@9:
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:97
     // @a4.abimethod()
     txn OnCompletion
     !
     assert // OnCompletion is NoOp
     txn ApplicationID
     assert // is not creating
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:10
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
     // class ZaibatsuAuthAndDao(ZaibatsuBase):
     txn GroupIndex
     int 1
@@ -177,7 +189,48 @@ main_fund_pool_route@9:
     int axfer
     ==
     assert // transaction type is axfer
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:64
+    txna ApplicationArgs 1
+    extract 2 0
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:97
+    // @a4.abimethod()
+    callsub optin_pool_asset
+    int 1
+    return
+
+main_fund_pool_route@10:
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:111
+    // @a4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
+    // class ZaibatsuAuthAndDao(ZaibatsuBase):
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    btoi
+    txna ApplicationArgs 3
+    btoi
+    txnas Accounts
+    txna ApplicationArgs 4
+    btoi
+    txnas Applications
+    txn GroupIndex
+    int 1
+    -
+    dup
+    gtxns TypeEnum
+    int axfer
+    ==
+    assert // transaction type is axfer
+    txna ApplicationArgs 5
+    btoi
+    txnas Assets
+    txna ApplicationArgs 6
+    btoi
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:111
     // @a4.abimethod()
     callsub fund_pool
     byte 0x151f7c75
@@ -187,7 +240,37 @@ main_fund_pool_route@9:
     int 1
     return
 
-main_opt_contract_into_asset_route@10:
+main_approve_pool_vote_route@11:
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:169
+    // @a4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
+    // class ZaibatsuAuthAndDao(ZaibatsuBase):
+    txna ApplicationArgs 1
+    extract 2 0
+    txn GroupIndex
+    int 1
+    -
+    dup
+    gtxns TypeEnum
+    int axfer
+    ==
+    assert // transaction type is axfer
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:169
+    // @a4.abimethod()
+    callsub approve_pool_vote
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_opt_contract_into_asset_route@12:
     // smart_contracts/zaibatsu_base/contract.py:36
     // @a4.abimethod()
     txn OnCompletion
@@ -195,7 +278,7 @@ main_opt_contract_into_asset_route@10:
     assert // OnCompletion is NoOp
     txn ApplicationID
     assert // is not creating
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:10
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:14
     // class ZaibatsuAuthAndDao(ZaibatsuBase):
     txna ApplicationArgs 1
     btoi
@@ -217,11 +300,11 @@ main_opt_contract_into_asset_route@10:
 
 // smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.hello(name: bytes) -> bytes:
 hello:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:11-12
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:15-16
     // @a4.abimethod()
     // def hello(self, name: a4.String) -> a4.String:
     proto 1 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:13
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:17
     // return "Hello, " + name
     frame_dig -1
     extract 2 0
@@ -239,17 +322,17 @@ hello:
 
 // smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.create() -> uint64:
 create:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:15-16
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:19-20
     // @a4.abimethod(create="allow")
     // def create(self) -> bool:
     proto 0 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:17
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:21
     // self.admins.append(a4.Address(ap.Txn.sender))
     int 0
     // smart_contracts/zaibatsu_base/contract.py:13
     // self.admins: AddressArray = AddressArray()
     byte "admins"
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:17
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:21
     // self.admins.append(a4.Address(ap.Txn.sender))
     app_global_get_ex
     assert // check self.admins exists
@@ -267,11 +350,11 @@ create:
     // smart_contracts/zaibatsu_base/contract.py:13
     // self.admins: AddressArray = AddressArray()
     byte "admins"
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:17
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:21
     // self.admins.append(a4.Address(ap.Txn.sender))
     swap
     app_global_put
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:18
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:22
     // return True
     int 1
     retsub
@@ -279,32 +362,32 @@ create:
 
 // smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.update() -> uint64:
 update:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:20-21
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:24-25
     // @a4.abimethod(allow_actions=["UpdateApplication"])
     // def update(self) -> bool:
     proto 0 1
     byte ""
     dup
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:22
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:26
     // if ap.Txn.sender == op.Global.creator_address:
     txn Sender
     global CreatorAddress
     ==
     bz update_after_if_else@2
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:23
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:27
     // return True
     int 1
     frame_bury 0
     retsub
 
 update_after_if_else@2:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:24
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:28
     // for index in ap.urange(self.admins.length):
     int 0
     // smart_contracts/zaibatsu_base/contract.py:13
     // self.admins: AddressArray = AddressArray()
     byte "admins"
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:24
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:28
     // for index in ap.urange(self.admins.length):
     app_global_get_ex
     assert // check self.admins exists
@@ -315,19 +398,19 @@ update_after_if_else@2:
     frame_bury 0
 
 update_for_header@3:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:24
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:28
     // for index in ap.urange(self.admins.length):
     frame_dig 0
     frame_dig 1
     <
     bz update_after_for@9
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:25
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:29
     // if self.admins[index] == ap.Txn.sender:
     int 0
     // smart_contracts/zaibatsu_base/contract.py:13
     // self.admins: AddressArray = AddressArray()
     byte "admins"
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:25
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:29
     // if self.admins[index] == ap.Txn.sender:
     app_global_get_ex
     assert // check self.admins exists
@@ -340,14 +423,14 @@ update_for_header@3:
     txn Sender
     ==
     bz update_after_if_else@6
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:26
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:30
     // return True
     int 1
     frame_bury 0
     retsub
 
 update_after_if_else@6:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:24
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:28
     // for index in ap.urange(self.admins.length):
     frame_dig 0
     int 1
@@ -356,7 +439,7 @@ update_after_if_else@6:
     b update_for_header@3
 
 update_after_for@9:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:27
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:31
     // return False
     int 0
     frame_bury 0
@@ -365,23 +448,23 @@ update_after_for@9:
 
 // smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.delete() -> uint64:
 delete:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:29-30
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:33-34
     // @a4.abimethod(allow_actions=["DeleteApplication"])
     // def delete(self) -> bool:
     proto 0 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:31
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:35
     // if ap.Txn.sender == op.Global.creator_address:
     txn Sender
     global CreatorAddress
     ==
     bz delete_after_if_else@2
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:32
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:36
     // return True
     int 1
     retsub
 
 delete_after_if_else@2:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:33
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:37
     // return False
     int 0
     retsub
@@ -389,19 +472,19 @@ delete_after_if_else@2:
 
 // smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.set_service_contract_address(address: bytes) -> uint64:
 set_service_contract_address:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:35-36
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:39-40
     // @a4.abimethod()
     // def set_service_contract_address(self, address: a4.Address) -> bool:
     proto 1 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:37
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:41
     // self.authorise_txn()
     callsub authorise_txn
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:38
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:42
     // self.service_contract_address = address
     byte "service_contract_address"
     frame_dig -1
     app_global_put
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:39
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:43
     // return True
     int 1
     retsub
@@ -497,81 +580,375 @@ authorise_txn_after_if_else@10:
     retsub
 
 
-// smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.authorize_pool_creation(txn: uint64, folks_feed_oracle: uint64, asset_decimals_multiplier: uint64) -> bytes:
+// smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.authorize_pool_creation(txn: uint64, folks_feed_oracle: uint64, pool_key: bytes, image_url: bytes, token_unit_name: bytes, token_asset_name: bytes, max_contributors: uint64, asset_decimals_multiplier: uint64) -> bytes:
 authorize_pool_creation:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:41-47
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:45-56
     // @a4.abimethod()
     // def authorize_pool_creation(
     //     self,
     //     txn: gtxn.AssetTransferTransaction,
     //     folks_feed_oracle: ap.Application,
+    //     pool_key: ap.String,
+    //     image_url: ap.String,
+    //     token_unit_name: ap.String,
+    //     token_asset_name: ap.String,
+    //     max_contributors: ap.UInt64,
     //     asset_decimals_multiplier: ap.UInt64,
-    // ) -> PoolFundResponse:
-    proto 3 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:49
+    // ) -> PoolInfo:
+    proto 8 1
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:58
     // txn.asset_receiver == self.service_contract_address.native
-    frame_dig -3
+    frame_dig -8
     gtxns AssetReceiver
     int 0
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:38
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:42
     // self.service_contract_address = address
     byte "service_contract_address"
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:49
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:58
     // txn.asset_receiver == self.service_contract_address.native
     app_global_get_ex
     assert // check self.service_contract_address exists
     ==
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:48-50
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:57-59
+    // assert (
+    //     txn.asset_receiver == self.service_contract_address.native
+    // ), "The asset_receiver mut be the ZaibatsuLoan account"
+    assert // The asset_receiver mut be the ZaibatsuLoan account
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:61
+    // asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
+    frame_dig -8
+    gtxns XferAsset
+    frame_dig -7
+    swap
+    callsub get_asset_price
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:64
+    // asset_dollar_price * txn.asset_amount
+    frame_dig -8
+    gtxns AssetAmount
+    *
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:63-65
+    // creation_fee = (
+    //     asset_dollar_price * txn.asset_amount
+    // ) // asset_decimals_multiplier
+    frame_dig -1
+    /
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:67-69
+    // assert creation_fee >= ap.UInt64(
+    //     20
+    // ), "The asset_amount must be worth at least 20 dollars"
+    int 20
+    >=
+    assert // The asset_amount must be worth at least 20 dollars
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:71
+    // total = ap.UInt64(1000000) * max_contributors
+    int 1000000
+    frame_dig -2
+    *
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:73
+    // existing = op.Box.get(pool_key.bytes)
+    frame_dig -6
+    box_get
+    bury 1
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:74
+    // assert not existing[1], "A pool with this key already exists"
+    !
+    assert // A pool with this key already exists
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:82
+    // manager=ap.Global.current_application_address,
+    global CurrentApplicationAddress
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:83-85
+    // reserve=ap.Global.current_application_address,
+    // freeze=ap.Global.current_application_address,
+    // clawback=ap.Global.current_application_address,
+    dupn 3
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:87
+    // asset_txn.submit()
+    itxn_begin
+    itxn_field ConfigAssetClawback
+    itxn_field ConfigAssetFreeze
+    itxn_field ConfigAssetReserve
+    itxn_field ConfigAssetManager
+    frame_dig -3
+    itxn_field ConfigAssetName
+    frame_dig -4
+    itxn_field ConfigAssetUnitName
+    frame_dig -5
+    itxn_field ConfigAssetURL
+    dup
+    itxn_field ConfigAssetTotal
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:76
+    // asset_txn = ap.itxn.AssetConfig(
+    int acfg
+    itxn_field TypeEnum
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:77
+    // fee=1000,
+    int 1000
+    itxn_field Fee
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:87
+    // asset_txn.submit()
+    itxn_submit
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:89
+    // pool_key=a4.String(pool_key),
+    frame_dig -6
+    len
+    itob
+    extract 6 2
+    frame_dig -6
+    concat
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:90
+    // token_balance=a4.UInt64(total),
+    swap
+    itob
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:91
+    // pool_asset_id=a4.UInt64(op.ITxn.created_asset_id().id),
+    itxn CreatedAssetID
+    itob
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:88-92
+    // pool_info = PoolInfo(
+    //     pool_key=a4.String(pool_key),
+    //     token_balance=a4.UInt64(total),
+    //     pool_asset_id=a4.UInt64(op.ITxn.created_asset_id().id),
+    // )
+    byte 0x0012
+    uncover 2
+    concat
+    swap
+    concat
+    swap
+    concat
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:94
+    // op.Box.put(pool_key.bytes, pool_info.bytes)
+    frame_dig -6
+    dig 1
+    box_put
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:95
+    // return pool_info
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.get_asset_price(folks_feed_oracle: uint64, asa: uint64) -> uint64:
+get_asset_price:
+    // smart_contracts/zaibatsu_base/contract.py:106-109
+    // @ap.subroutine
+    // def get_asset_price(
+    //     self, folks_feed_oracle: ap.Application, asa: ap.Asset
+    // ) -> ap.UInt64:
+    proto 2 1
+    // smart_contracts/zaibatsu_base/contract.py:110
+    // [value, exists] = op.AppGlobal.get_ex_bytes(folks_feed_oracle, op.itob(asa.id))
+    frame_dig -1
+    itob
+    frame_dig -2
+    swap
+    app_global_get_ex
+    // smart_contracts/zaibatsu_base/contract.py:111
+    // assert exists, "This aset is not supported"
+    assert // This aset is not supported
+    // smart_contracts/zaibatsu_base/contract.py:112
+    // return op.extract_uint64(value, ap.UInt64(0))
+    int 0
+    extract_uint64
+    retsub
+
+
+// smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.optin_pool_asset(optin_txn: uint64, pool_key: bytes) -> void:
+optin_pool_asset:
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:97-102
+    // @a4.abimethod()
+    // def optin_pool_asset(
+    //     self,
+    //     optin_txn: gtxn.AssetTransferTransaction,
+    //     pool_key: ap.String,
+    // ) -> None:
+    proto 2 0
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:103
+    // pool_data, exists = op.Box.get(pool_key.bytes)
+    frame_dig -1
+    box_get
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:104
+    // assert exists, "A pool with that key does not exist"
+    assert // A pool with that key does not exist
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:108
+    // optin_txn.xfer_asset.id == pool_info.pool_asset_id.native
+    frame_dig -2
+    gtxns XferAsset
+    swap
+    extract 10 8 // on error: Index access is out of bounds
+    btoi
+    ==
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:107-109
+    // assert (
+    //     optin_txn.xfer_asset.id == pool_info.pool_asset_id.native
+    // ), "The OptIn txn asset must be the same as the pool asset"
+    assert // The OptIn txn asset must be the same as the pool asset
+    retsub
+
+
+// smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.fund_pool(pool_key: bytes, fund_amount: uint64, user_account: bytes, folks_feed_oracle: uint64, txn: uint64, pool_asset: uint64, asset_decimals_multiplier: uint64) -> bytes:
+fund_pool:
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:111-121
+    // @a4.abimethod()
+    // def fund_pool(
+    //     self,
+    //     pool_key: ap.String,
+    //     fund_amount: ap.UInt64,
+    //     user_account: ap.Account,
+    //     folks_feed_oracle: ap.Application,
+    //     txn: gtxn.AssetTransferTransaction,
+    //     pool_asset: ap.Asset,
+    //     asset_decimals_multiplier: ap.UInt64,
+    // ) -> PoolFundResponse:
+    proto 7 1
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:122
+    // pool_data, exists = op.Box.get(pool_key.bytes)
+    frame_dig -7
+    box_get
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:123
+    // assert exists, "A pool with that key does not exist"
+    assert // A pool with that key does not exist
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:127
+    // user_account == txn.sender
+    frame_dig -3
+    gtxns Sender
+    frame_dig -5
+    ==
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:126-128
+    // assert (
+    //     user_account == txn.sender
+    // ), "The user account must be the same as the txn sender"
+    assert // The user account must be the same as the txn sender
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:130
+    // pool_asset.id == pool_info.pool_asset_id.native
+    dup
+    extract 10 8 // on error: Index access is out of bounds
+    btoi
+    frame_dig -2
+    dig 1
+    ==
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:129-131
+    // assert (
+    //     pool_asset.id == pool_info.pool_asset_id.native
+    // ), "pool_asset must match the asset of the specified pool"
+    assert // pool_asset must match the asset of the specified pool
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:133
+    // asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
+    frame_dig -3
+    gtxns XferAsset
+    frame_dig -4
+    swap
+    callsub get_asset_price
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:134
+    // asset_amount = txn.asset_amount
+    frame_dig -3
+    gtxns AssetAmount
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:137
+    // asset_amount // asset_decimals_multiplier * asset_dollar_price
+    dup
+    frame_dig -1
+    /
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:136-138
+    // asset_value_in_usd = (
+    //     asset_amount // asset_decimals_multiplier * asset_dollar_price
+    // )
+    uncover 2
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:137
+    // asset_amount // asset_decimals_multiplier * asset_dollar_price
+    *
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:147
+    // reward_txn.submit()
+    itxn_begin
+    uncover 2
+    itxn_field XferAsset
+    dup
+    itxn_field AssetAmount
+    frame_dig -5
+    itxn_field AssetReceiver
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:142
+    // note="Pool fund reward",
+    byte "Pool fund reward"
+    itxn_field Note
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:140
+    // reward_txn = ap.itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:141
+    // fee=1000,
+    int 1000
+    itxn_field Fee
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:147
+    // reward_txn.submit()
+    itxn_submit
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:149
+    // pool_info.token_balance = a4.UInt64(pool_info.token_balance.native - asset_value_in_usd)
+    dig 2
+    extract 2 8 // on error: Index access is out of bounds
+    btoi
+    swap
+    -
+    itob
+    uncover 2
+    swap
+    replace2 2
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:152
+    // txn.asset_receiver == self.service_contract_address.native
+    frame_dig -3
+    gtxns AssetReceiver
+    int 0
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:42
+    // self.service_contract_address = address
+    byte "service_contract_address"
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:152
+    // txn.asset_receiver == self.service_contract_address.native
+    app_global_get_ex
+    assert // check self.service_contract_address exists
+    ==
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:151-153
     // assert (
     //     txn.asset_receiver == self.service_contract_address.native
     // ), "The asset_receiver mut be the ZaibatsuService account"
     assert // The asset_receiver mut be the ZaibatsuService account
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:51
-    // amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount, ap.UInt64(1))
-    frame_dig -3
-    gtxns AssetAmount
-    dup
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:155-157
+    // amount_plus_transaction_fee = self.calculate_amt_plus_fee(
+    //     fund_amount, ap.UInt64(1)
+    // )
+    frame_dig -6
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:156
+    // fund_amount, ap.UInt64(1)
     int 1
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:155-157
+    // amount_plus_transaction_fee = self.calculate_amt_plus_fee(
+    //     fund_amount, ap.UInt64(1)
+    // )
     callsub calculate_amt_plus_fee
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:52
-    // fee_amount = amount_plus_transaction_fee - txn.asset_amount
-    dig 1
-    -
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:53
-    // pool_fund_amount = txn.asset_amount - fee_amount
-    -
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:55
-    // asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
-    frame_dig -3
-    gtxns XferAsset
-    frame_dig -2
-    swap
-    callsub get_asset_price
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:56
-    // pool_fund_dollar_amount = (asset_dollar_price * pool_fund_amount) // asset_decimals_multiplier
-    dig 1
-    *
-    frame_dig -1
-    /
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:57
-    // assert pool_fund_dollar_amount > ap.UInt64(20), "The asset_amount must be worth greater that 20 dollars"
-    int 20
-    >
-    assert // The asset_amount must be worth greater that 20 dollars
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:59
-    // amount=a4.UInt64(pool_fund_amount),
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:159
+    // txn.asset_amount >= amount_plus_transaction_fee
+    uncover 2
+    <=
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:158-160
+    // assert (
+    //     txn.asset_amount >= amount_plus_transaction_fee
+    // ), "The txn amount is insufficient"
+    assert // The txn amount is insufficient
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:163
+    // amount=a4.UInt64(fund_amount),
+    frame_dig -6
     itob
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:60
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:164
     // success=a4.Bool(True),  # noqa: FBT003
     byte 0x80
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:58-61
-    // approval = PoolFundResponse(
-    //     amount=a4.UInt64(pool_fund_amount),
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:162-165
+    // response = PoolFundResponse(
+    //     amount=a4.UInt64(fund_amount),
     //     success=a4.Bool(True),  # noqa: FBT003
     // )
     concat
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:62
-    // return approval
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:166
+    // op.Box.put(pool_key.bytes, pool_info.bytes)
+    frame_dig -7
+    uncover 2
+    box_put
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:167
+    // return response
     retsub
 
 
@@ -587,148 +964,69 @@ calculate_amt_plus_fee:
     frame_dig -1
     *
     // smart_contracts/zaibatsu_base/contract.py:102
-    // amt_adjusted_for_decimal = amt * ap.UInt64(10)
+    // multiplied = fee_percentage * amt
     frame_dig -2
-    int 10
     *
     // smart_contracts/zaibatsu_base/contract.py:103
-    // approx_fee_plus_amt = self.percentage_increase(a4.UInt64(amt_adjusted_for_decimal), a4.UInt64(fee_percentage))
-    itob
-    swap
-    itob
-    callsub percentage_increase
+    // half_percent = multiplied // 1000
+    int 1000
+    /
     // smart_contracts/zaibatsu_base/contract.py:104
-    // corrected_approx_fee_plus_amt = approx_fee_plus_amt.native // ap.UInt64(10)
-    btoi
-    int 10
-    /
-    // smart_contracts/zaibatsu_base/contract.py:105
-    // return corrected_approx_fee_plus_amt
+    // return half_percent
     retsub
 
 
-// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.percentage_increase(amount: bytes, increase: bytes) -> bytes:
-percentage_increase:
-    // smart_contracts/zaibatsu_base/contract.py:118-119
-    // @ap.subroutine
-    // def percentage_increase(self, amount: a4.UInt64, increase: a4.UInt64) -> a4.UInt64:
-    proto 2 1
-    // smart_contracts/zaibatsu_base/contract.py:120
-    // percentage = self.percentage(amount, increase)
-    frame_dig -2
-    frame_dig -1
-    callsub percentage
-    // smart_contracts/zaibatsu_base/contract.py:121
-    // results = percentage.native + amount.native
-    btoi
-    frame_dig -2
-    btoi
-    +
-    // smart_contracts/zaibatsu_base/contract.py:122
-    // return a4.UInt64(results)
-    itob
-    retsub
-
-
-// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.percentage(amount: bytes, percent: bytes) -> bytes:
-percentage:
-    // smart_contracts/zaibatsu_base/contract.py:113-114
-    // @ap.subroutine
-    // def percentage(self, amount: a4.UInt64, percent: a4.UInt64) -> a4.UInt64:
-    proto 2 1
-    // smart_contracts/zaibatsu_base/contract.py:115
-    // result = (percent.native * amount.native) // ap.UInt64(100)
-    frame_dig -1
-    btoi
-    frame_dig -2
-    btoi
-    *
-    int 100
-    /
-    // smart_contracts/zaibatsu_base/contract.py:116
-    // return a4.UInt64(result)
-    itob
-    retsub
-
-
-// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.get_asset_price(folks_feed_oracle: uint64, asa: uint64) -> uint64:
-get_asset_price:
-    // smart_contracts/zaibatsu_base/contract.py:107-108
-    // @ap.subroutine
-    // def get_asset_price(self, folks_feed_oracle: ap.Application, asa: ap.Asset) -> ap.UInt64:
-    proto 2 1
-    // smart_contracts/zaibatsu_base/contract.py:109
-    // [value, exists] = op.AppGlobal.get_ex_bytes(folks_feed_oracle, op.itob(asa.id))
-    frame_dig -1
-    itob
-    frame_dig -2
-    swap
-    app_global_get_ex
-    // smart_contracts/zaibatsu_base/contract.py:110
-    // assert exists, "This aset is not supported"
-    assert // This aset is not supported
-    // smart_contracts/zaibatsu_base/contract.py:111
-    // return op.extract_uint64(value, ap.UInt64(0))
-    int 0
-    extract_uint64
-    retsub
-
-
-// smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.fund_pool(txn: uint64) -> bytes:
-fund_pool:
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:64-68
+// smart_contracts.zaibatsu_auth_and_dao.contract.ZaibatsuAuthAndDao.approve_pool_vote(pool_key: bytes, txn: uint64) -> bytes:
+approve_pool_vote:
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:169-174
     // @a4.abimethod()
-    // def fund_pool(
+    // def approve_pool_vote(
     //     self,
+    //     pool_key: ap.String,
     //     txn: gtxn.AssetTransferTransaction,
-    // ) -> PoolFundResponse:
-    proto 1 1
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:70
-    // txn.asset_receiver == self.service_contract_address.native
+    // ) -> PoolVoteApprovalResponse:
+    proto 2 1
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:175
+    // box_data, exists = op.Box.get(pool_key.bytes)
+    frame_dig -2
+    box_get
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:176
+    // assert exists, "PoolInfo with that key does not exist"
+    assert // PoolInfo with that key does not exist
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:179
+    // txn.xfer_asset.id == pool_info.pool_asset_id.native
     frame_dig -1
-    gtxns AssetReceiver
-    int 0
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:38
-    // self.service_contract_address = address
-    byte "service_contract_address"
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:70
-    // txn.asset_receiver == self.service_contract_address.native
-    app_global_get_ex
-    assert // check self.service_contract_address exists
+    gtxns XferAsset
+    swap
+    extract 10 8 // on error: Index access is out of bounds
+    btoi
     ==
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:69-71
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:178-180
     // assert (
-    //     txn.asset_receiver == self.service_contract_address.native
-    // ), "The asset_receiver mut be the ZaibatsuService account"
-    assert // The asset_receiver mut be the ZaibatsuService account
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:72
-    // amount_plus_transaction_fee = self.calculate_amt_plus_fee(txn.asset_amount, ap.UInt64(1))
+    //     txn.xfer_asset.id == pool_info.pool_asset_id.native
+    // ), "The asset transfered must be the pool token"
+    assert // The asset transfered must be the pool token
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:183
+    // multiplier=a4.UInt64(txn.asset_amount),
     frame_dig -1
     gtxns AssetAmount
-    dup
-    int 1
-    callsub calculate_amt_plus_fee
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:73
-    // fee_amount = amount_plus_transaction_fee - txn.asset_amount
-    dig 1
-    -
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:74
-    // pool_fund_amount = txn.asset_amount - fee_amount
-    -
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:77
-    // amount=a4.UInt64(pool_fund_amount),
     itob
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:78
-    // success=a4.Bool(True),  # noqa: FBT003
-    byte 0x80
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:76-79
-    // approval = PoolFundResponse(
-    //     amount=a4.UInt64(pool_fund_amount),
-    //     success=a4.Bool(True),  # noqa: FBT003
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:184
+    // txn_id=a4.String.from_bytes(txn.txn_id),
+    frame_dig -1
+    gtxns TxID
+    swap
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:182-185
+    // response = PoolVoteApprovalResponse(
+    //     multiplier=a4.UInt64(txn.asset_amount),
+    //     txn_id=a4.String.from_bytes(txn.txn_id),
     // )
+    byte 0x000a
     concat
-    // smart_contracts/zaibatsu_auth_and_dao/contract.py:80
-    // return approval
+    swap
+    concat
+    // smart_contracts/zaibatsu_auth_and_dao/contract.py:186
+    // return response
     retsub
 
 

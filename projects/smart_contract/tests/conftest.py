@@ -10,13 +10,13 @@ from algokit_utils.config import config
 from algosdk import mnemonic
 from algosdk.v2client.algod import AlgodClient
 from algosdk.v2client.indexer import IndexerClient
-from artifacts.zaibatsu_loan.client import ZaibatsuLoanClient
 from dotenv import load_dotenv
 from folksfeedsdk.folks_feed_client import FolksFeedClient
 
 from smart_contracts.artifacts.zaibatsu_auth_and_dao.client import (
     ZaibatsuAuthAndDaoClient,
 )
+from smart_contracts.artifacts.zaibatsu_loan.client import ZaibatsuLoanClient
 from tests.utils import unwrap_env_var
 
 
