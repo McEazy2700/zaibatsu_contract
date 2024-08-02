@@ -30,26 +30,14 @@ class ZaibatsuLoan(ZaibatsuBase):
         txn: gtxn.AssetTransferTransaction,
     ) -> LoanDetails:
         self.ensure_app_reciever(txn)
-
-        val = op.Box.get(loan_key)
-        assert not val[1], "A Loan purchase with this key has already been initiated"
-
         collateral_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
         assert collateral_price > 0, "The asa is of no value or is not supported"
-
-        assert (
-            loan_details.loan_type == a4.String("P2P")
-            or loan_details.loan_type == a4.String("DAO")
-            or loan_details.loan_type == a4.String("ZAIBATSU")
-        ), "The loan must be either P2P, DAO or ZAIBATSU"
 
         if loan_details.loan_type == a4.String("P2P"):
             assert loan_details.payment_recipients.length == ap.UInt64(
                 1
             ), "Only one recipient is allowed in a P2P loan"
 
-        assert not loan_details.collateral_paid, "The loan collateral must not be paid"
-        assert not loan_details.principal_paid, "The loan principal must not be paid"
         assert (
             loan_details.borrower == txn.sender
         ), "The sender must also be the borrower"
@@ -136,10 +124,6 @@ class ZaibatsuLoan(ZaibatsuBase):
         [loan_bytes, exists] = op.Box.get(loan_key)
         assert exists, "A reccord with the loan_key passed was not found"
         details = LoanDetails.from_bytes(loan_bytes)
-        assert (
-            details.collateral_paid
-        ), "The loan collateral must have been paid by this point"
-        assert not details.principal_paid, "The principal must not have been paid"
         assert (
             txn.xfer_asset.id == details.principal_asset_id.native
         ), "The asset transfered must be the same as the principal"
@@ -313,3 +297,31 @@ class ZaibatsuLoan(ZaibatsuBase):
         op.Box.delete(repayment_key.bytes)
 
         return clean_up_response
+
+    @ap.arc4.abimethod()
+    def handle_payment_default(
+        self,
+        loan_key: ap.String,
+        repayment_key: ap.String,
+        payment_principal_asset_amount: ap.UInt64,
+        payment_collateral_asset_amount: ap.UInt64,
+    ) -> None:
+        [loan_bytes, exists] = op.Box.get(loan_key.bytes)
+        assert exists, "A reccord with the loan_key passed was not found"
+
+        details = LoanDetails.from_bytes(loan_bytes)
+
+        details.collateral_asset_amount = a4.UInt64(
+            details.collateral_asset_amount.native - payment_collateral_asset_amount
+        )
+
+        round_payment = PendingLoanRoundPayment(
+            repayment_key=a4.String(repayment_key),
+            loan_key=a4.String.from_bytes(loan_key.bytes),
+            repayment_amount=a4.UInt64(payment_principal_asset_amount),
+            percentage_paid=a4.UInt64(0),
+            recipients=details.payment_recipients.copy(),
+        )
+
+        op.Box.put(loan_key.bytes, details.bytes)
+        op.Box.put(repayment_key.bytes, round_payment.bytes)

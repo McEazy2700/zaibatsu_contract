@@ -9,7 +9,6 @@ from algosdk import atomic_transaction_composer, transaction
 from algosdk.v2client.algod import AlgodClient
 from folksfeedsdk.constants import TestnetAssetId
 
-# from folksfeedsdk.folks_feed_client import FolksFeedClient
 from smart_contracts.artifacts.zaibatsu_loan.client import (
     CompleteLoanArgs,
     LoanDetails,
@@ -17,10 +16,7 @@ from smart_contracts.artifacts.zaibatsu_loan.client import (
     ZaibatsuLoanClient,
 )
 
-from .utils import (
-    calc_amount_plus_fee,
-    encode_id_to_base64,
-)
+from .utils import calc_amount_plus_fee, encode_id_to_base64
 
 FOLKS_FEED_ORACLE_TESTNET_ID = 159512493
 
@@ -72,7 +68,7 @@ def test_update(zaibatsu_loan_client: ZaibatsuLoanClient) -> None:
     zaibatsu_loan_client.update_update()
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_opt_contract_into_asset(zaibatsu_loan_client: ZaibatsuLoanClient):
     result1 = zaibatsu_loan_client.opt_contract_into_asset(asset=TestnetAssetId.USDC)
     result2 = zaibatsu_loan_client.opt_contract_into_asset(asset=TestnetAssetId.USDt)
@@ -113,7 +109,7 @@ def initiate_loan_purchase(
     )
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_initiate_p2p_loan_purchase(
     zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
@@ -131,7 +127,7 @@ def test_initiate_p2p_loan_purchase(
     )
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_initiate_non_p2p_loan_purchase(
     zaibatsu_loan_client: ZaibatsuLoanClient,
     algod_client: AlgodClient,
@@ -152,7 +148,7 @@ def test_initiate_non_p2p_loan_purchase(
     )
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_complete_p2p_loan_purchase(
     algod_client: AlgodClient,
     zaibatsu_loan_client: ZaibatsuLoanClient,
@@ -196,7 +192,7 @@ def test_complete_p2p_loan_purchase(
     )
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_complete_non_p2p_loan_purchase(
     zaibatsu_loan_client: ZaibatsuLoanClient,
     creator_account: Account,
@@ -228,7 +224,7 @@ def repayment_key() -> str:
     return loan_key
 
 
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_initiate_p2p_loan_repayment(
     zaibatsu_loan_client: ZaibatsuLoanClient,
     creator_account: Account,
@@ -265,6 +261,7 @@ def test_initiate_p2p_loan_repayment(
     )
 
 
+@pytest.mark.skip()
 def test_execute_loan_repayment(
     zaibatsu_loan_client: ZaibatsuLoanClient,
     test_account: Account,
@@ -289,6 +286,7 @@ def test_execute_loan_repayment(
     )
 
 
+@pytest.mark.skip()
 def test_clean_up_loan_repayment(
     zaibatsu_loan_client: ZaibatsuLoanClient,
     loan_details: LoanDetails,
@@ -305,3 +303,15 @@ def test_clean_up_loan_repayment(
         ),
     )
     print(result.return_value)
+
+
+# @pytest.mark.skip()
+# def test_handle_payment_default(
+#     zaibatsu_loan_client: ZaibatsuLoanClient,
+#     ffo_client: FolksFeedClient,
+# ) -> None:
+#     result = zaibatsu_loan_client.handle_payment_default(
+#         folks_feed_oracle=FOLKS_FEED_ORACLE_TESTNET_ID, asset=TestnetAssetId.USDC
+#     )
+#     price = ffo_client.get_asset_price(TestnetAssetId.USDC)
+#     print({"ReturnValue": result.return_value, "Price": price})

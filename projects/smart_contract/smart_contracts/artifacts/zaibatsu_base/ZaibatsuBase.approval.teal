@@ -12,8 +12,9 @@ main_entrypoint@2:
     method "update()bool"
     method "delete()bool"
     method "opt_contract_into_asset(asset)bool"
+    method "transfer_asset(asset,uint64,account)bool"
     txna ApplicationArgs 0
-    match main_create_route@3 main_update_route@4 main_delete_route@5 main_opt_contract_into_asset_route@6
+    match main_create_route@3 main_update_route@4 main_delete_route@5 main_opt_contract_into_asset_route@6 main_transfer_asset_route@7
     err // reject transaction
 
 main_create_route@3:
@@ -92,6 +93,38 @@ main_opt_contract_into_asset_route@6:
     // smart_contracts/zaibatsu_base/contract.py:36
     // @a4.abimethod()
     callsub opt_contract_into_asset
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_transfer_asset_route@7:
+    // smart_contracts/zaibatsu_base/contract.py:41
+    // @a4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/zaibatsu_base/contract.py:11
+    // class ZaibatsuBase(ap.ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    txnas Assets
+    txna ApplicationArgs 2
+    btoi
+    txna ApplicationArgs 3
+    btoi
+    txnas Accounts
+    // smart_contracts/zaibatsu_base/contract.py:41
+    // @a4.abimethod()
+    callsub transfer_asset
     byte 0x00
     int 0
     uncover 2
@@ -272,37 +305,164 @@ opt_contract_into_asset:
 
 // smart_contracts.zaibatsu_base.contract.ZaibatsuBase.opt_app_into_asset(asset: uint64) -> void:
 opt_app_into_asset:
-    // smart_contracts/zaibatsu_base/contract.py:41-45
+    // smart_contracts/zaibatsu_base/contract.py:55-59
     // ################################################################
     // #####################   Subroutines    #########################
     // ################################################################
     // @ap.subroutine
     // def opt_app_into_asset(self, asset: ap.Asset) -> None:
     proto 1 0
-    // smart_contracts/zaibatsu_base/contract.py:50
+    // smart_contracts/zaibatsu_base/contract.py:64
     // asset_receiver=ap.Global.current_application_address,
     global CurrentApplicationAddress
-    // smart_contracts/zaibatsu_base/contract.py:52
+    // smart_contracts/zaibatsu_base/contract.py:66
     // txn.submit()
     itxn_begin
     itxn_field AssetReceiver
     frame_dig -1
     itxn_field XferAsset
-    // smart_contracts/zaibatsu_base/contract.py:47
+    // smart_contracts/zaibatsu_base/contract.py:61
     // asset_amount=0,
     int 0
     itxn_field AssetAmount
+    // smart_contracts/zaibatsu_base/contract.py:60
+    // txn = ap.itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    // smart_contracts/zaibatsu_base/contract.py:62
+    // fee=1000,
+    int 1000
+    itxn_field Fee
+    // smart_contracts/zaibatsu_base/contract.py:66
+    // txn.submit()
+    itxn_submit
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.transfer_asset(asset: uint64, asset_amount: uint64, recipient: bytes) -> uint64:
+transfer_asset:
+    // smart_contracts/zaibatsu_base/contract.py:41-44
+    // @a4.abimethod()
+    // def transfer_asset(
+    //     self, asset: ap.Asset, asset_amount: ap.UInt64, recipient: ap.Account
+    // ) -> bool:
+    proto 3 1
+    // smart_contracts/zaibatsu_base/contract.py:45
+    // self.authorise_txn()
+    callsub authorise_txn
+    // smart_contracts/zaibatsu_base/contract.py:52
+    // txn.submit()
+    itxn_begin
+    frame_dig -2
+    itxn_field AssetAmount
+    frame_dig -1
+    itxn_field AssetReceiver
+    frame_dig -3
+    itxn_field XferAsset
     // smart_contracts/zaibatsu_base/contract.py:46
     // txn = ap.itxn.AssetTransfer(
     int axfer
     itxn_field TypeEnum
-    // smart_contracts/zaibatsu_base/contract.py:48
+    // smart_contracts/zaibatsu_base/contract.py:47
     // fee=1000,
     int 1000
     itxn_field Fee
     // smart_contracts/zaibatsu_base/contract.py:52
     // txn.submit()
     itxn_submit
+    // smart_contracts/zaibatsu_base/contract.py:53
+    // return True
+    int 1
+    retsub
+
+
+// smart_contracts.zaibatsu_base.contract.ZaibatsuBase.authorise_txn() -> void:
+authorise_txn:
+    // smart_contracts/zaibatsu_base/contract.py:68-69
+    // @ap.subroutine
+    // def authorise_txn(self) -> None:
+    proto 0 0
+    byte ""
+    dup
+    // smart_contracts/zaibatsu_base/contract.py:70
+    // is_authorised = a4.Bool()
+    byte 0x00
+    // smart_contracts/zaibatsu_base/contract.py:71
+    // if ap.Txn.sender == op.Global.creator_address:
+    txn Sender
+    global CreatorAddress
+    ==
+    bz authorise_txn_else_body@2
+    // smart_contracts/zaibatsu_base/contract.py:72
+    // is_authorised = a4.Bool(True)  # noqa: FBT003
+    byte 0x80
+    frame_bury 2
+    b authorise_txn_after_if_else@10
+
+authorise_txn_else_body@2:
+    // smart_contracts/zaibatsu_base/contract.py:74
+    // for index in ap.urange(self.admins.length):
+    int 0
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
+    byte "admins"
+    // smart_contracts/zaibatsu_base/contract.py:74
+    // for index in ap.urange(self.admins.length):
+    app_global_get_ex
+    assert // check self.admins exists
+    int 0
+    extract_uint16
+    frame_bury 1
+    int 0
+    frame_bury 0
+
+authorise_txn_for_header@3:
+    // smart_contracts/zaibatsu_base/contract.py:74
+    // for index in ap.urange(self.admins.length):
+    frame_dig 0
+    frame_dig 1
+    <
+    bz authorise_txn_after_if_else@10
+    // smart_contracts/zaibatsu_base/contract.py:75
+    // if self.admins[index] == ap.Txn.sender:
+    int 0
+    // smart_contracts/zaibatsu_base/contract.py:13
+    // self.admins: AddressArray = AddressArray()
+    byte "admins"
+    // smart_contracts/zaibatsu_base/contract.py:75
+    // if self.admins[index] == ap.Txn.sender:
+    app_global_get_ex
+    assert // check self.admins exists
+    extract 2 0
+    frame_dig 0
+    int 32
+    *
+    int 32
+    extract3 // on error: Index access is out of bounds
+    txn Sender
+    ==
+    bz authorise_txn_after_if_else@6
+    // smart_contracts/zaibatsu_base/contract.py:76
+    // is_authorised = a4.Bool(True)  # noqa: FBT003
+    byte 0x80
+    frame_bury 2
+
+authorise_txn_after_if_else@6:
+    // smart_contracts/zaibatsu_base/contract.py:74
+    // for index in ap.urange(self.admins.length):
+    frame_dig 0
+    int 1
+    +
+    frame_bury 0
+    b authorise_txn_for_header@3
+
+authorise_txn_after_if_else@10:
+    // smart_contracts/zaibatsu_base/contract.py:77
+    // assert is_authorised, "You are not authorised to perform this action"
+    frame_dig 2
+    byte 0x00
+    !=
+    assert // You are not authorised to perform this action
     retsub
 
 

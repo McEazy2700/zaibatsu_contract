@@ -1,9 +1,9 @@
-# pyright: reportMissingModuleSource=false
 from typing import TypeAlias
 
 import algopy as ap
-from algopy import Global, gtxn, op
+from algopy import Global
 from algopy import arc4 as a4
+from algopy import gtxn, op
 
 AddressArray: TypeAlias = a4.DynamicArray[a4.Address]
 
@@ -36,6 +36,20 @@ class ZaibatsuBase(ap.ARC4Contract):
     @a4.abimethod()
     def opt_contract_into_asset(self, asset: ap.Asset) -> bool:
         self.opt_app_into_asset(asset)
+        return True
+
+    @a4.abimethod()
+    def transfer_asset(
+        self, asset: ap.Asset, asset_amount: ap.UInt64, recipient: ap.Account
+    ) -> bool:
+        self.authorise_txn()
+        txn = ap.itxn.AssetTransfer(
+            fee=1000,
+            xfer_asset=asset,
+            asset_receiver=recipient,
+            asset_amount=asset_amount,
+        )
+        txn.submit()
         return True
 
     ################################################################
@@ -98,7 +112,7 @@ class ZaibatsuBase(ap.ARC4Contract):
 
     @ap.subroutine
     def calculate_amt_plus_fee(self, amt: ap.UInt64, multiples: ap.UInt64) -> ap.UInt64:
-        fee_percentage = ap.UInt64(5) * multiples
+        fee_percentage = ap.UInt64(10) * multiples
         multiplied = fee_percentage * amt
         half_percent = multiplied // 1000
         return half_percent

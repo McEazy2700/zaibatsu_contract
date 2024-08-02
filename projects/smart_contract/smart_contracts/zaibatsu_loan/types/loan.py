@@ -2,15 +2,7 @@
 from typing import Literal, TypeAlias
 
 from algopy import arc4 as a4
-from algopy.arc4 import (
-    Address,
-    Bool,
-    DynamicArray,
-    String,
-    Struct,
-    UFixedNxM,
-    UInt8,
-)
+from algopy.arc4 import Address, Bool, DynamicArray, String, Struct, UFixedNxM, UInt8
 
 Decimal: TypeAlias = UFixedNxM[Literal[64], Literal[8]]
 AddressArray: TypeAlias = DynamicArray[Address]
