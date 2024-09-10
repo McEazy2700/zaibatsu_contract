@@ -50,15 +50,9 @@ class ZaibatsuLoan(ZaibatsuBase):
             loan_details.collateral_asset_amount.native, ap.UInt64(1)
         ), "Insufficient txn asset_amount! Amount must be equal to collateral_asset_amount plus fees"
 
-        assert (
-            loan_details.payment_completion_timestamp.native
-            > op.Global.latest_timestamp
-        ), "The payment completion timestamp must be greater than now"
-
         loan_details.collateral_paid = a4.Bool(True)  # noqa: FBT003
 
         op.Box.put(loan_key, loan_details.bytes)
-
         return loan_details
 
     @ap.arc4.abimethod()
@@ -124,15 +118,6 @@ class ZaibatsuLoan(ZaibatsuBase):
         [loan_bytes, exists] = op.Box.get(loan_key)
         assert exists, "A reccord with the loan_key passed was not found"
         details = LoanDetails.from_bytes(loan_bytes)
-        assert (
-            txn.xfer_asset.id == details.principal_asset_id.native
-        ), "The asset transfered must be the same as the principal"
-        assert (
-            borrower == details.borrower.native
-        ), "The borrower must be the borrower in the loan details"
-        assert (
-            principal_asset.id == details.principal_asset_id.native
-        ), "The asset passed must be the same as the principal"
 
         completion_txn = ap.itxn.AssetTransfer(
             fee=1000,
@@ -232,10 +217,6 @@ class ZaibatsuLoan(ZaibatsuBase):
             + repayment.percentage_paid.native
         )
 
-        assert new_percentage_paid <= ap.UInt64(
-            10000
-        ), "PendingLoanRe.percentage_paid + PaymentReciepient.payment_percentage will exceed 100%"
-
         repayment_txn = ap.itxn.AssetTransfer(
             fee=1000,
             xfer_asset=loan.principal_asset_id.native,
@@ -268,10 +249,6 @@ class ZaibatsuLoan(ZaibatsuBase):
         [loan_bytes, loan_exists] = op.Box.get(repayment.loan_key.bytes)
         assert loan_exists, "A loan with this key was not found"
         loan = LoanDetails.from_bytes(loan_bytes)
-
-        assert (
-            loan.borrower.native == borrower_account
-        ), "The borrower_account provided is incorrect"
 
         clean_up_response = CleanUpLoanRepaymentResponse(
             loan_repayment_complete=a4.Bool()
@@ -325,3 +302,7 @@ class ZaibatsuLoan(ZaibatsuBase):
 
         op.Box.put(loan_key.bytes, details.bytes)
         op.Box.put(repayment_key.bytes, round_payment.bytes)
+
+    @ap.arc4.abimethod()
+    def delete_loan(self, loan_key: ap.Bytes) -> None:
+        op.Box.delete(loan_key)

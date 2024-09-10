@@ -50,52 +50,40 @@ class ZaibatsuAuthAndDao(ZaibatsuBase):
         return self.get_zai_token()
 
     @a4.abimethod()
-    def authorize_pool_creation(
-        self,
-        txn: gtxn.AssetTransferTransaction,
-        folks_feed_oracle: ap.Application,
+    def transfer_zai(
+        self, to: a4.Address, asset_amount: a4.UInt64, note: a4.String
     ) -> bool:
-        assert (
-            txn.asset_receiver == self.service_contract_address.native
-        ), "The asset_receiver mut be the ZaibatsuLoan account"
-
-        asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
-        creation_fee = asset_dollar_price * txn.asset_amount
-        assert creation_fee >= ap.UInt64(20), "The asset_amount must be worth at least 20 dollars"
+        self.authorise_txn()
+        zai_asset_id = self.get_zai_token()
+        txn = ap.itxn.AssetTransfer(
+            fee=1000,
+            asset_receiver=to.native,
+            asset_amount=asset_amount.native,
+            xfer_asset=zai_asset_id.native,
+            note=note.native,
+        )
+        txn.submit()
         return True
 
     @a4.abimethod()
     def fund_pool(
         self,
         fund_amount: ap.UInt64,
-        user_account: ap.Account,
         folks_feed_oracle: ap.Application,
-        zai: ap.Asset,
         txn: gtxn.AssetTransferTransaction,
     ) -> PoolFundResponse:
-        zai_asset_id = self.get_zai_token()
-
-        assert zai.id == zai_asset_id.native, "The asset passed must be the zaibatsu asset"
-        assert user_account == txn.sender, "The user account must be the same as the txn sender"
 
         asset_dollar_price = self.get_asset_price(folks_feed_oracle, txn.xfer_asset)
-        asset_amount = txn.asset_amount
-        asset_value_in_usd = asset_amount // asset_dollar_price
-        reward_txn = ap.itxn.AssetTransfer(
-            fee=1000,
-            note="Pool fund reward",
-            asset_receiver=user_account,
-            asset_amount=asset_value_in_usd,
-            xfer_asset=zai,
-        )
-        reward_txn.submit()
-
         assert (
             txn.asset_receiver == self.service_contract_address.native
         ), "The asset_receiver mut be the ZaibatsuService account"
 
-        amount_plus_transaction_fee = self.calculate_amt_plus_fee(fund_amount, ap.UInt64(1))
-        assert txn.asset_amount >= amount_plus_transaction_fee, "The txn amount is insufficient"
+        amount_plus_transaction_fee = self.calculate_amt_plus_fee(
+            fund_amount, ap.UInt64(1)
+        )
+        assert (
+            txn.asset_amount >= amount_plus_transaction_fee
+        ), "The txn amount is insufficient"
 
         response = PoolFundResponse(
             amount=a4.UInt64(fund_amount),
@@ -110,7 +98,9 @@ class ZaibatsuAuthAndDao(ZaibatsuBase):
         txn: gtxn.AssetTransferTransaction,
     ) -> PoolVoteApprovalResponse:
         zai_asset_id = self.get_zai_token()
-        assert txn.xfer_asset.id == zai_asset_id.native, "The asset transfered must be the pool token"
+        assert (
+            txn.xfer_asset.id == zai_asset_id.native
+        ), "The asset transfered must be the pool token"
 
         response = PoolVoteApprovalResponse(
             multiplier=a4.UInt64(txn.asset_amount),
@@ -120,11 +110,12 @@ class ZaibatsuAuthAndDao(ZaibatsuBase):
 
     @ap.subroutine
     def handle_create_zai_token(self) -> None:
-        box = op.Box.get(b"zai")
+        box = op.Box.get(b"ZAI")
         if not box[1]:
             asset_txn = ap.itxn.AssetConfig(
                 fee=1000,
-                total=10000000000000000,
+                decimals=6,
+                total=1_000_000_000_000,
                 url="https://res.cloudinary.com/dev-media/image/upload/v1722011867/Zaibatsu_z_1234_Circle_yjt49c.png",
                 unit_name="ZAI",
                 asset_name="ZAI",
@@ -135,15 +126,15 @@ class ZaibatsuAuthAndDao(ZaibatsuBase):
             )
             asset_txn.submit()
             asset_id = op.ITxn.created_asset_id().id
-            op.Box.put(b"zai", a4.UInt64(asset_id).bytes)
+            op.Box.put(b"ZAI", a4.UInt64(asset_id).bytes)
 
     @ap.subroutine
     def get_zai_token(self) -> a4.UInt64:
-        box_data, exists = op.Box.get(b"zai")
+        box_data, exists = op.Box.get(b"ZAI")
         zai_asset_id = a4.UInt64()
         if not exists:
             self.handle_create_zai_token()
-            box_data, exists = op.Box.get(b"zai")
+            box_data, exists = op.Box.get(b"ZAI")
             zai_asset_id = a4.UInt64.from_bytes(box_data)
         else:
             zai_asset_id = a4.UInt64.from_bytes(box_data)
